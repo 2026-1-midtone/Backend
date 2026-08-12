@@ -54,4 +54,9 @@ public class NapSession {
     public LocalDateTime getStartedAt() { return startedAt; }
     public LocalDateTime getExpectedEndAt() { return expectedEndAt; }
     public NapStatus getStatus() { return status; }
+
+    public void finish(NapStatus status, LocalDateTime endedAt) {
+        this.status = status;
+        this.endedAt = endedAt;
+    }
 }

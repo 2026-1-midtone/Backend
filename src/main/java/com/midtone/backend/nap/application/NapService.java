@@ -46,6 +46,32 @@ public class NapService {
         return toActiveNap(nap);
     }
 
+    public FinishedNap finishNap(long napId, String requestedStatus) {
+        NapStatus status;
+        try {
+            status = NapStatus.valueOf(requestedStatus);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 상태는 COMPLETED 또는 CANCELED여야 합니다.");
+        }
+        if (status == NapStatus.RUNNING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 상태는 COMPLETED 또는 CANCELED여야 합니다.");
+        }
+
+        NapSession nap = napSessionRepository.findById(napId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 낮잠 세션을 찾을 수 없습니다."));
+        if (nap.getUserId() != currentUserIdProvider.getCurrentUserId()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
+        }
+        if (nap.getStatus() != NapStatus.RUNNING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 종료된 낮잠 세션입니다.");
+        }
+
+        java.time.LocalDateTime endedAt = java.time.LocalDateTime.now(DEFAULT_ZONE);
+        nap.finish(status, endedAt);
+        int actualMinutes = (int) Math.max(0, Duration.between(nap.getStartedAt(), endedAt).toMinutes());
+        return new FinishedNap(nap.getId(), status.name(), actualMinutes);
+    }
+
     private ActiveNap toActiveNap(NapSession nap) {
         OffsetDateTime startedAt = nap.getStartedAt().atZone(DEFAULT_ZONE).toOffsetDateTime();
         OffsetDateTime expectedEndAt = nap.getExpectedEndAt().atZone(DEFAULT_ZONE).toOffsetDateTime();
@@ -55,5 +81,8 @@ public class NapService {
 
     public record ActiveNap(Long napId, int plannedMinutes, OffsetDateTime startedAt, OffsetDateTime expectedEndAt,
                             long remainingSeconds, String status) {
+    }
+
+    public record FinishedNap(Long napId, String status, int actualMinutes) {
     }
 }

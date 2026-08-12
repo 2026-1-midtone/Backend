@@ -3,6 +3,7 @@ package com.midtone.backend.nap;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,5 +69,19 @@ class NapControllerTest {
                 .andExpect(jsonPath("$.napId").value(45))
                 .andExpect(jsonPath("$.plannedMinutes").value(25))
                 .andExpect(jsonPath("$.status").value("RUNNING"));
+    }
+
+    @Test
+    void completesRunningNap() throws Exception {
+        given(napService.finishNap(44L, "COMPLETED"))
+                .willReturn(new NapService.FinishedNap(44L, "COMPLETED", 20));
+
+        mockMvc.perform(patch("/api/v1/naps/44")
+                        .contentType("application/json")
+                        .content("{\"status\":\"COMPLETED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.napId").value(44))
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.actualMinutes").value(20));
     }
 }
