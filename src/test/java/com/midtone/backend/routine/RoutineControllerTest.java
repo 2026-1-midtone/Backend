@@ -54,4 +54,17 @@ class RoutineControllerTest {
                 .andExpect(jsonPath("$.status").value("DONE"))
                 .andExpect(jsonPath("$.progress.done").value(1));
     }
+
+    @Test
+    void returnsDailyRoutineSummary() throws Exception {
+        LocalDate date = LocalDate.of(2026, 8, 7);
+        given(routineService.getSummary(date)).willReturn(new RoutineService.DailySummary(
+                date, 2, 1, 1, 0.5, List.of("20분 파워냅"), List.of("기상 후 빛 노출")));
+
+        mockMvc.perform(get("/api/v1/routines/summary").param("date", "2026-08-07"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summaryDate").value("2026-08-07"))
+                .andExpect(jsonPath("$.doneCount").value(1))
+                .andExpect(jsonPath("$.missedTitles[0]").value("기상 후 빛 노출"));
+    }
 }

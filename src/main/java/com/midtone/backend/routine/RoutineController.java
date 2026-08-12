@@ -25,6 +25,11 @@ public class RoutineController {
         return routineService.getRoutines(date == null ? LocalDate.now() : date);
     }
 
+    @GetMapping("/summary")
+    public RoutineService.DailySummary getSummary(@RequestParam(required = false) LocalDate date) {
+        return routineService.getSummary(date == null ? LocalDate.now() : date);
+    }
+
     @PatchMapping("/tasks/{taskId}")
     public RoutineService.UpdatedTask updateTaskStatus(@PathVariable long taskId, @RequestBody UpdateTaskRequest request) {
         return routineService.updateTaskStatus(taskId, request.status());

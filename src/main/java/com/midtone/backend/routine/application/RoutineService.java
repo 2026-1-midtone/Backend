@@ -51,6 +51,18 @@ public class RoutineService {
         return new UpdatedTask(task.getId(), status.name(), progressFor(task.getTaskDate()));
     }
 
+    public DailySummary getSummary(LocalDate date) {
+        List<com.midtone.backend.routine.domain.RoutineTask> tasks = findTasks(date);
+        int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+        int skipped = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.SKIPPED).count();
+        int total = tasks.size();
+        List<String> doneTitles = tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE)
+                .map(com.midtone.backend.routine.domain.RoutineTask::getTitle).toList();
+        List<String> missedTitles = tasks.stream().filter(task -> task.getStatus() != TaskStatus.DONE)
+                .map(com.midtone.backend.routine.domain.RoutineTask::getTitle).toList();
+        return new DailySummary(date, total, done, skipped, total == 0 ? 0.0 : (double) done / total, doneTitles, missedTitles);
+    }
+
     private List<com.midtone.backend.routine.domain.RoutineTask> findTasks(LocalDate date) {
         return routineTaskRepository.findAllByUserIdAndTaskDateOrderByIdAsc(currentUserIdProvider.getCurrentUserId(), date);
     }
@@ -74,5 +86,9 @@ public class RoutineService {
     }
 
     public record UpdatedTask(Long taskId, String status, Progress progress) {
+    }
+
+    public record DailySummary(LocalDate summaryDate, int totalCount, int doneCount, int skippedCount,
+                               double completionRate, List<String> doneTitles, List<String> missedTitles) {
     }
 }
