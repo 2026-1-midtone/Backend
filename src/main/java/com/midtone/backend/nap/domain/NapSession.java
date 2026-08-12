@@ -40,6 +40,14 @@ public class NapSession {
     protected NapSession() {
     }
 
+    public NapSession(long userId, int plannedMinutes, LocalDateTime startedAt) {
+        this.userId = userId;
+        this.plannedMinutes = plannedMinutes;
+        this.startedAt = startedAt;
+        this.expectedEndAt = startedAt.plusMinutes(plannedMinutes);
+        this.status = NapStatus.RUNNING;
+    }
+
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public Integer getPlannedMinutes() { return plannedMinutes; }

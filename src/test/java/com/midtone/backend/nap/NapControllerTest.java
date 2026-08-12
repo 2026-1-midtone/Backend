@@ -2,6 +2,7 @@ package com.midtone.backend.nap;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,5 +49,24 @@ class NapControllerTest {
         mockMvc.perform(get("/api/v1/naps/active"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activeNap").isEmpty());
+    }
+
+    @Test
+    void startsNapWithRequestedDuration() throws Exception {
+        given(napService.startNap(25)).willReturn(new ActiveNap(
+                45L,
+                25,
+                OffsetDateTime.parse("2026-08-07T18:00:00+09:00"),
+                OffsetDateTime.parse("2026-08-07T18:25:00+09:00"),
+                1500,
+                "RUNNING"));
+
+        mockMvc.perform(post("/api/v1/naps")
+                        .contentType("application/json")
+                        .content("{\"plannedMinutes\":25}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.napId").value(45))
+                .andExpect(jsonPath("$.plannedMinutes").value(25))
+                .andExpect(jsonPath("$.status").value("RUNNING"));
     }
 }

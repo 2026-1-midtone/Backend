@@ -4,6 +4,7 @@ import com.midtone.backend.nap.application.NapService;
 import java.util.Collections;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,5 +26,14 @@ public class NapController {
             return ResponseEntity.ok(Collections.singletonMap("activeNap", null));
         }
         return ResponseEntity.ok(activeNap);
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping
+    public ResponseEntity<NapService.ActiveNap> startNap(@RequestBody(required = false) StartNapRequest request) {
+        Integer plannedMinutes = request == null ? null : request.plannedMinutes();
+        return ResponseEntity.status(201).body(napService.startNap(plannedMinutes));
+    }
+
+    public record StartNapRequest(Integer plannedMinutes) {
     }
 }
