@@ -6,6 +6,9 @@ import com.midtone.backend.routine.domain.TaskStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -63,6 +66,32 @@ public class RoutineService {
         return new DailySummary(date, total, done, skipped, total == 0 ? 0.0 : (double) done / total, doneTitles, missedTitles);
     }
 
+    public RoutineReport getReport(String period) {
+        if (!"7d".equals(period) && !"30d".equals(period)) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "period는 7d 또는 30d만 지원합니다.");
+        }
+        int days = "7d".equals(period) ? 7 : 30;
+        LocalDate to = LocalDate.now();
+        LocalDate from = to.minusDays(days - 1L);
+        List<com.midtone.backend.routine.domain.RoutineTask> tasks = routineTaskRepository
+                .findAllByUserIdAndTaskDateBetweenOrderByTaskDateAscIdAsc(currentUserIdProvider.getCurrentUserId(), from, to);
+        int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+        double completionRate = tasks.isEmpty() ? 0.0 : (double) done / tasks.size();
+        Set<LocalDate> completedDates = tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE)
+                .map(com.midtone.backend.routine.domain.RoutineTask::getTaskDate).collect(Collectors.toSet());
+        int current = 0;
+        LocalDate cursor = to;
+        while (completedDates.contains(cursor)) { current++; cursor = cursor.minusDays(1); }
+        int longest = 0;
+        int running = 0;
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            if (completedDates.contains(date)) { running++; longest = Math.max(longest, running); } else { running = 0; }
+        }
+        LocalDate lastCheckinDate = completedDates.stream().max(LocalDate::compareTo).orElse(null);
+        return new RoutineReport(period, from, to, completionRate, new Streak(current, longest, lastCheckinDate));
+    }
+
     private List<com.midtone.backend.routine.domain.RoutineTask> findTasks(LocalDate date) {
         return routineTaskRepository.findAllByUserIdAndTaskDateOrderByIdAsc(currentUserIdProvider.getCurrentUserId(), date);
     }
@@ -90,5 +119,11 @@ public class RoutineService {
 
     public record DailySummary(LocalDate summaryDate, int totalCount, int doneCount, int skippedCount,
                                double completionRate, List<String> doneTitles, List<String> missedTitles) {
+    }
+
+    public record RoutineReport(String period, LocalDate from, LocalDate to, double overallCompletionRate, Streak streak) {
+    }
+
+    public record Streak(int currentStreak, int longestStreak, LocalDate lastCheckinDate) {
     }
 }

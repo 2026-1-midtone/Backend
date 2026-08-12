@@ -30,6 +30,11 @@ public class RoutineController {
         return routineService.getSummary(date == null ? LocalDate.now() : date);
     }
 
+    @GetMapping("/report")
+    public RoutineService.RoutineReport getReport(@RequestParam(defaultValue = "7d") String period) {
+        return routineService.getReport(period);
+    }
+
     @PatchMapping("/tasks/{taskId}")
     public RoutineService.UpdatedTask updateTaskStatus(@PathVariable long taskId, @RequestBody UpdateTaskRequest request) {
         return routineService.updateTaskStatus(taskId, request.status());

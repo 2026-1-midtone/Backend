@@ -67,4 +67,17 @@ class RoutineControllerTest {
                 .andExpect(jsonPath("$.doneCount").value(1))
                 .andExpect(jsonPath("$.missedTitles[0]").value("기상 후 빛 노출"));
     }
+
+    @Test
+    void returnsSevenDayRoutineReport() throws Exception {
+        given(routineService.getReport("7d")).willReturn(new RoutineService.RoutineReport(
+                "7d", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 7), 0.71,
+                new RoutineService.Streak(3, 5, LocalDate.of(2026, 8, 7))));
+
+        mockMvc.perform(get("/api/v1/routines/report").param("period", "7d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.period").value("7d"))
+                .andExpect(jsonPath("$.overallCompletionRate").value(0.71))
+                .andExpect(jsonPath("$.streak.currentStreak").value(3));
+    }
 }
