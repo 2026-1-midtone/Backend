@@ -18,6 +18,7 @@ docker compose up --build
 ```
 
 API는 `http://localhost:8080`에서 실행됩니다. MySQL과 Redis 데이터는 Docker 볼륨에 보존됩니다.
+호스트의 MySQL 포트는 기존 로컬 MySQL과 충돌하지 않도록 기본 `3307`을 사용합니다.
 
 ## 환경변수
 
