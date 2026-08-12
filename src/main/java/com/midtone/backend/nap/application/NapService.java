@@ -4,6 +4,7 @@ import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.nap.domain.NapSession;
 import com.midtone.backend.nap.domain.NapSessionRepository;
 import com.midtone.backend.nap.domain.NapStatus;
+import com.midtone.backend.user.domain.UserSettingsRepository;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -18,10 +19,13 @@ public class NapService {
 
     private final CurrentUserIdProvider currentUserIdProvider;
     private final NapSessionRepository napSessionRepository;
+    private final UserSettingsRepository userSettingsRepository;
 
-    public NapService(CurrentUserIdProvider currentUserIdProvider, NapSessionRepository napSessionRepository) {
+    public NapService(CurrentUserIdProvider currentUserIdProvider, NapSessionRepository napSessionRepository,
+                      UserSettingsRepository userSettingsRepository) {
         this.currentUserIdProvider = currentUserIdProvider;
         this.napSessionRepository = napSessionRepository;
+        this.userSettingsRepository = userSettingsRepository;
     }
 
     public ActiveNap getActiveNap() {
@@ -37,12 +41,21 @@ public class NapService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 진행 중인 낮잠 타이머가 있습니다.");
         }
 
-        int plannedMinutes = requestedMinutes == null ? 20 : requestedMinutes;
+        com.midtone.backend.user.domain.UserSettings settings = userSettingsRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자 설정을 찾을 수 없습니다."));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(DEFAULT_ZONE);
+        long todayCount = napSessionRepository.countByUserIdAndStartedAtBetween(userId,
+                now.toLocalDate().atStartOfDay(), now.toLocalDate().plusDays(1).atStartOfDay());
+        if (todayCount >= settings.getMaxNapsPerDay()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "오늘 설정한 최대 낮잠 횟수를 모두 사용했어요.");
+        }
+
+        int plannedMinutes = requestedMinutes == null ? settings.getPreferredNapMinutes() : requestedMinutes;
         if (plannedMinutes < 1 || plannedMinutes > 180) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 시간은 1분 이상 180분 이하여야 합니다.");
         }
 
-        NapSession nap = napSessionRepository.save(new NapSession(userId, plannedMinutes, java.time.LocalDateTime.now(DEFAULT_ZONE)));
+        NapSession nap = napSessionRepository.save(new NapSession(userId, plannedMinutes, now));
         return toActiveNap(nap);
     }
 
