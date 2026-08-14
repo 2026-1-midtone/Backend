@@ -1,6 +1,5 @@
 package com.midtone.backend.global.error;
 
-import com.midtone.backend.auth.UnauthenticatedException;
 import com.midtone.backend.auth.application.InvalidRefreshTokenException;
 import com.midtone.backend.auth.google.InvalidGoogleTokenException;
 import org.springframework.http.HttpStatus;

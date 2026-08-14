@@ -1,8 +1,10 @@
 package com.midtone.backend.global.config;
 
 import com.midtone.backend.auth.application.AuthService;
+import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,10 +36,23 @@ class SecurityConfigTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private JwtProvider jwtProvider;
+
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/shifts"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+    }
+
+    @Test
+    void validAccessTokenPassesAuthenticationAndReachesDispatcher() throws Exception {
+        when(jwtProvider.isValid("valid-token")).thenReturn(true);
+        when(jwtProvider.isAccessToken("valid-token")).thenReturn(true);
+        when(jwtProvider.getUserId("valid-token")).thenReturn(1L);
+
+        mockMvc.perform(get("/api/v1/shifts").header("Authorization", "Bearer valid-token"))
+                .andExpect(status().isNotFound());
     }
 }

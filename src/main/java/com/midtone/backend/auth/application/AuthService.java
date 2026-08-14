@@ -1,10 +1,10 @@
 package com.midtone.backend.auth.application;
 
-import com.midtone.backend.auth.UnauthenticatedException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
 import com.midtone.backend.auth.jwt.JwtProvider;
+import com.midtone.backend.global.error.UnauthenticatedException;
 import com.midtone.backend.user.application.UserResponse;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;

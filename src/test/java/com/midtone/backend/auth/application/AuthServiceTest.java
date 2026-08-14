@@ -9,11 +9,11 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.midtone.backend.auth.UnauthenticatedException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
 import com.midtone.backend.auth.jwt.JwtProvider;
+import com.midtone.backend.global.error.UnauthenticatedException;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
 import java.time.Duration;

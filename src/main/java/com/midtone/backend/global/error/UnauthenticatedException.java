@@ -1,4 +1,4 @@
-package com.midtone.backend.auth;
+package com.midtone.backend.global.error;
 
 public class UnauthenticatedException extends RuntimeException {
 
