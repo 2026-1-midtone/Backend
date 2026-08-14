@@ -1,8 +1,8 @@
 package com.midtone.backend.user;
 
-import com.midtone.backend.user.application.SaveSettingsRequest;
-import com.midtone.backend.user.application.SettingsResponse;
-import com.midtone.backend.user.application.UserSettingsService;
+import com.midtone.backend.user.application.settings.SaveSettingsRequest;
+import com.midtone.backend.user.application.settings.SettingsResponse;
+import com.midtone.backend.user.application.settings.UserSettingsService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

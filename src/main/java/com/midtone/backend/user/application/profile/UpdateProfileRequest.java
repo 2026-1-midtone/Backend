@@ -1,4 +1,4 @@
-package com.midtone.backend.user.application;
+package com.midtone.backend.user.application.profile;
 
 import com.midtone.backend.user.domain.User;
 import jakarta.validation.constraints.Size;

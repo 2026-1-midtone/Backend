@@ -1,4 +1,4 @@
-package com.midtone.backend.user.application;
+package com.midtone.backend.user.application.settings;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;

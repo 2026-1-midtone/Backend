@@ -18,6 +18,7 @@ com.midtone.backend.{도메인}/
 - **Domain**: JPA 엔티티, `Repository` 인터페이스, 엔티티 자체가 가져야 할 규칙(불변식 검증 등)만 둔다. 프레임워크 의존성(컨트롤러, 서비스)을 domain 패키지가 알게 하지 않는다.
 - 공통 기능(에러 응답, 인증 사용자 조회 등)은 `global` 패키지에 둔다. (`global/error`, `global/user`, `global/config` 참고)
 - `application`/`domain`만으로는 관심사가 뒤섞이는 경우(외부 연동, 토큰 처리 등 기술적으로 독립된 덩어리), 도메인 패키지 밑에 그 관심사 이름으로 하위 패키지를 추가로 둔다. (`auth/jwt`, `auth/google` 참고 — JWT 발급/검증과 구글 토큰 검증은 서로 변경 이유가 다르고, 유스케이스 로직도 아니라서 `application`에서 분리했다.) 하위 패키지가 하나 더 생기는 것 자체보다, `application` 폴더 하나에 성격이 다른 클래스가 뒤섞이는 걸 더 피한다.
+- 한 도메인이 서로 다른 REST 리소스(유스케이스)를 여러 개 가지면서 `application` 파일 수가 많아지면(대략 10개 이상), 유스케이스 이름으로 `application` 밑에 하위 패키지를 나눈다. (`user/application/profile`, `user/application/settings`, `user/application/notification` 참고 — 내 정보, 개인화 설정, 알림 설정은 각자 컨트롤러·서비스·DTO가 따로 있고 서로 의존하지 않아서 나눴다.) 이건 `auth/jwt`처럼 "기술적으로 독립된 덩어리"를 분리하는 것과는 다른 이유다 — 여기서는 세 유스케이스 모두 성격이 같은 CRUD라서 `domain`까지 나눌 필요는 없고(엔티티들이 서로 가볍고 자주 참조되므로 `domain`은 그대로 flat하게 둔다), `application`만 유스케이스 단위로 쪼갠다.
 
 ## 코드 컨벤션
 

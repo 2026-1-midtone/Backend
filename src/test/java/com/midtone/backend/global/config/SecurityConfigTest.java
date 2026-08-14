@@ -4,8 +4,9 @@ import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
-import com.midtone.backend.user.application.UserService;
-import com.midtone.backend.user.application.UserSettingsService;
+import com.midtone.backend.user.application.notification.NotificationSettingService;
+import com.midtone.backend.user.application.profile.UserService;
+import com.midtone.backend.user.application.settings.UserSettingsService;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +47,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private UserSettingsService userSettingsService;
+
+    @MockitoBean
+    private NotificationSettingService notificationSettingService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {

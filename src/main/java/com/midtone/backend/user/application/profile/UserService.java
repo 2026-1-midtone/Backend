@@ -1,4 +1,4 @@
-package com.midtone.backend.user.application;
+package com.midtone.backend.user.application.profile;
 
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;

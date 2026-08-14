@@ -1,9 +1,9 @@
 package com.midtone.backend.user;
 
-import com.midtone.backend.user.application.MyProfileResponse;
-import com.midtone.backend.user.application.UpdateProfileRequest;
-import com.midtone.backend.user.application.UpdateProfileResponse;
-import com.midtone.backend.user.application.UserService;
+import com.midtone.backend.user.application.profile.MyProfileResponse;
+import com.midtone.backend.user.application.profile.UpdateProfileRequest;
+import com.midtone.backend.user.application.profile.UpdateProfileResponse;
+import com.midtone.backend.user.application.profile.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;

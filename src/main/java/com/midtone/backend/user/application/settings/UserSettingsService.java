@@ -1,4 +1,4 @@
-package com.midtone.backend.user.application;
+package com.midtone.backend.user.application.settings;
 
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.user.domain.CaffeineSensitivity;

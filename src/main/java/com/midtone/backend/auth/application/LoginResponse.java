@@ -1,6 +1,6 @@
 package com.midtone.backend.auth.application;
 
-import com.midtone.backend.user.application.UserResponse;
+import com.midtone.backend.user.application.profile.UserResponse;
 
 public record LoginResponse(
         String accessToken,

@@ -1,4 +1,4 @@
-package com.midtone.backend.user.application;
+package com.midtone.backend.user.application.profile;
 
 public class UserNotFoundException extends RuntimeException {
 
