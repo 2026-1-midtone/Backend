@@ -6,6 +6,7 @@ import com.midtone.backend.user.application.UpdateProfileResponse;
 import com.midtone.backend.user.application.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,5 +33,11 @@ public class UserController {
     public ResponseEntity<UpdateProfileResponse> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         UpdateProfileResponse response = userService.updateMyProfile(request);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> withdraw() {
+        userService.withdraw();
+        return ResponseEntity.noContent().build();
     }
 }

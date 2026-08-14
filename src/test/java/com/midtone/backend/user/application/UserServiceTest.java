@@ -2,8 +2,10 @@ package com.midtone.backend.user.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
@@ -22,6 +24,8 @@ class UserServiceTest {
     private UserRepository userRepository;
     @Mock
     private CurrentUserIdProvider currentUserIdProvider;
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @InjectMocks
     private UserService userService;
@@ -70,6 +74,18 @@ class UserServiceTest {
 
         assertEquals("새닉네임", response.nickname());
         assertEquals("Asia/Seoul", response.timezone());
+    }
+
+    @Test
+    void 회원_탈퇴하면_유저와_리프레시_토큰을_삭제한다() {
+        User user = newUserWithId(1L);
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.withdraw();
+
+        verify(refreshTokenRepository).deleteByUserId(1L);
+        verify(userRepository).delete(user);
     }
 
     private User newUserWithId(long id) {

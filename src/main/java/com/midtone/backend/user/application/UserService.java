@@ -1,5 +1,6 @@
 package com.midtone.backend.user.application;
 
+import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
@@ -11,10 +12,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final CurrentUserIdProvider currentUserIdProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    public UserService(UserRepository userRepository, CurrentUserIdProvider currentUserIdProvider) {
+    public UserService(
+            UserRepository userRepository,
+            CurrentUserIdProvider currentUserIdProvider,
+            RefreshTokenRepository refreshTokenRepository
+    ) {
         this.userRepository = userRepository;
         this.currentUserIdProvider = currentUserIdProvider;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @Transactional(readOnly = true)
@@ -27,6 +34,13 @@ public class UserService {
         User user = getCurrentUser();
         applyChanges(user, request);
         return UpdateProfileResponse.from(user);
+    }
+
+    @Transactional
+    public void withdraw() {
+        User user = getCurrentUser();
+        refreshTokenRepository.deleteByUserId(user.getId());
+        userRepository.delete(user);
     }
 
     private void applyChanges(User user, UpdateProfileRequest request) {
