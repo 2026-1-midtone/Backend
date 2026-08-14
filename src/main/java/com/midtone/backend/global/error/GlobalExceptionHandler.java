@@ -1,5 +1,6 @@
 package com.midtone.backend.global.error;
 
+import com.midtone.backend.auth.application.InvalidRefreshTokenException;
 import com.midtone.backend.auth.google.InvalidGoogleTokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidGoogleTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidGoogleToken(InvalidGoogleTokenException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(exception.getMessage()));
     }

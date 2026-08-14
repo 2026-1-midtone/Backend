@@ -41,6 +41,16 @@ public class AuthService {
         return issueLoginResponse(user, isNewUser);
     }
 
+    @Transactional
+    public TokenResponse reissue(ReissueRequest request) {
+        String refreshToken = request.refreshToken();
+        validateRefreshToken(refreshToken);
+        long userId = jwtProvider.getUserId(refreshToken);
+        validateTokenMatchesStored(userId, refreshToken);
+
+        return issueTokens(userId);
+    }
+
     private User createUser(GoogleUserInfo googleUserInfo, String timezone) {
         User user = new User(
                 googleUserInfo.subject(),
@@ -54,11 +64,31 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-    private LoginResponse issueLoginResponse(User user, boolean isNewUser) {
-        String accessToken = jwtProvider.createAccessToken(user.getId());
-        String refreshToken = jwtProvider.createRefreshToken(user.getId());
-        refreshTokenRepository.save(user.getId(), refreshToken, jwtProvider.getRefreshTokenExpiration());
+    private void validateRefreshToken(String refreshToken) {
+        if (!jwtProvider.isValid(refreshToken) || !jwtProvider.isRefreshToken(refreshToken)) {
+            throw new InvalidRefreshTokenException();
+        }
+    }
 
-        return new LoginResponse(accessToken, refreshToken, isNewUser, UserResponse.from(user), isNewUser);
+    private void validateTokenMatchesStored(long userId, String refreshToken) {
+        String storedRefreshToken = refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(InvalidRefreshTokenException::new);
+        if (!storedRefreshToken.equals(refreshToken)) {
+            throw new InvalidRefreshTokenException();
+        }
+    }
+
+    private LoginResponse issueLoginResponse(User user, boolean isNewUser) {
+        TokenResponse tokens = issueTokens(user.getId());
+        return new LoginResponse(
+                tokens.accessToken(), tokens.refreshToken(), isNewUser, UserResponse.from(user), isNewUser);
+    }
+
+    private TokenResponse issueTokens(long userId) {
+        String accessToken = jwtProvider.createAccessToken(userId);
+        String refreshToken = jwtProvider.createRefreshToken(userId);
+        refreshTokenRepository.save(userId, refreshToken, jwtProvider.getRefreshTokenExpiration());
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 }

@@ -2,6 +2,7 @@ package com.midtone.backend.auth.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -67,6 +68,38 @@ class AuthServiceTest {
         assertFalse(response.onboardingRequired());
     }
 
+    @Test
+    void 유효한_리프레시_토큰이면_토큰을_재발급한다() {
+        ReissueRequest request = new ReissueRequest("refresh-token");
+        stubValidRefreshToken(1L, "refresh-token");
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("refresh-token"));
+        when(jwtProvider.createAccessToken(1L)).thenReturn("new-access-token");
+        when(jwtProvider.createRefreshToken(1L)).thenReturn("new-refresh-token");
+        when(jwtProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(30));
+
+        TokenResponse response = authService.reissue(request);
+
+        assertEquals("new-access-token", response.accessToken());
+        assertEquals("new-refresh-token", response.refreshToken());
+    }
+
+    @Test
+    void 유효하지_않은_리프레시_토큰이면_예외를_던진다() {
+        ReissueRequest request = new ReissueRequest("invalid-token");
+        when(jwtProvider.isValid("invalid-token")).thenReturn(false);
+
+        assertThrows(InvalidRefreshTokenException.class, () -> authService.reissue(request));
+    }
+
+    @Test
+    void 저장된_리프레시_토큰과_다르면_예외를_던진다() {
+        ReissueRequest request = new ReissueRequest("refresh-token");
+        stubValidRefreshToken(1L, "refresh-token");
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("other-token"));
+
+        assertThrows(InvalidRefreshTokenException.class, () -> authService.reissue(request));
+    }
+
     private void stubGoogleVerification(User user) {
         GoogleUserInfo googleUserInfo = new GoogleUserInfo(
                 "google-1", user.getEmail(), user.getNickname(), user.getProfileImageUrl());
@@ -77,6 +110,12 @@ class AuthServiceTest {
         when(jwtProvider.createAccessToken(anyLong())).thenReturn("access-token");
         when(jwtProvider.createRefreshToken(anyLong())).thenReturn("refresh-token");
         when(jwtProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(30));
+    }
+
+    private void stubValidRefreshToken(long userId, String refreshToken) {
+        when(jwtProvider.isValid(refreshToken)).thenReturn(true);
+        when(jwtProvider.isRefreshToken(refreshToken)).thenReturn(true);
+        when(jwtProvider.getUserId(refreshToken)).thenReturn(userId);
     }
 
     private User newUserWithId(long id) {
