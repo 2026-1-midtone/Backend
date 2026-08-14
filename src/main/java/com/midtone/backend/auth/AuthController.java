@@ -3,6 +3,7 @@ package com.midtone.backend.auth;
 import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.application.GoogleLoginRequest;
 import com.midtone.backend.auth.application.LoginResponse;
+import com.midtone.backend.auth.application.LogoutRequest;
 import com.midtone.backend.auth.application.ReissueRequest;
 import com.midtone.backend.auth.application.TokenResponse;
 import jakarta.validation.Valid;
@@ -32,5 +33,11 @@ public class AuthController {
     public ResponseEntity<TokenResponse> reissue(@Valid @RequestBody ReissueRequest request) {
         TokenResponse response = authService.reissue(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }

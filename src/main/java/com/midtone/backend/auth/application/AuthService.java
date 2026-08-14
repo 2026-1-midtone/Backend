@@ -1,5 +1,6 @@
 package com.midtone.backend.auth.application;
 
+import com.midtone.backend.auth.UnauthenticatedException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -51,6 +52,12 @@ public class AuthService {
         return issueTokens(userId);
     }
 
+    @Transactional
+    public void logout(LogoutRequest request) {
+        long userId = extractAuthenticatedUserId(request.refreshToken());
+        refreshTokenRepository.deleteByUserId(userId);
+    }
+
     private User createUser(GoogleUserInfo googleUserInfo, String timezone) {
         User user = new User(
                 googleUserInfo.subject(),
@@ -65,7 +72,7 @@ public class AuthService {
     }
 
     private void validateRefreshToken(String refreshToken) {
-        if (!jwtProvider.isValid(refreshToken) || !jwtProvider.isRefreshToken(refreshToken)) {
+        if (!isStructurallyValidRefreshToken(refreshToken)) {
             throw new InvalidRefreshTokenException();
         }
     }
@@ -76,6 +83,17 @@ public class AuthService {
         if (!storedRefreshToken.equals(refreshToken)) {
             throw new InvalidRefreshTokenException();
         }
+    }
+
+    private long extractAuthenticatedUserId(String refreshToken) {
+        if (!isStructurallyValidRefreshToken(refreshToken)) {
+            throw new UnauthenticatedException();
+        }
+        return jwtProvider.getUserId(refreshToken);
+    }
+
+    private boolean isStructurallyValidRefreshToken(String refreshToken) {
+        return jwtProvider.isValid(refreshToken) && jwtProvider.isRefreshToken(refreshToken);
     }
 
     private LoginResponse issueLoginResponse(User user, boolean isNewUser) {

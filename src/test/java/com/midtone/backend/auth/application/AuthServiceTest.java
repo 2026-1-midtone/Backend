@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.auth.UnauthenticatedException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -98,6 +100,24 @@ class AuthServiceTest {
         when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("other-token"));
 
         assertThrows(InvalidRefreshTokenException.class, () -> authService.reissue(request));
+    }
+
+    @Test
+    void 유효한_리프레시_토큰으로_로그아웃하면_저장된_토큰을_삭제한다() {
+        LogoutRequest request = new LogoutRequest("refresh-token");
+        stubValidRefreshToken(1L, "refresh-token");
+
+        authService.logout(request);
+
+        verify(refreshTokenRepository).deleteByUserId(1L);
+    }
+
+    @Test
+    void 유효하지_않은_리프레시_토큰으로_로그아웃하면_예외를_던진다() {
+        LogoutRequest request = new LogoutRequest("invalid-token");
+        when(jwtProvider.isValid("invalid-token")).thenReturn(false);
+
+        assertThrows(UnauthenticatedException.class, () -> authService.logout(request));
     }
 
     private void stubGoogleVerification(User user) {
