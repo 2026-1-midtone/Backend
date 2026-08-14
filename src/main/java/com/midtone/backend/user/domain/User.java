@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class User {
 
+    public static final int NICKNAME_MAX_LENGTH = 50;
+
     private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
     @Id
@@ -24,7 +26,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = NICKNAME_MAX_LENGTH)
     private String nickname;
 
     @Column(name = "profile_image_url", length = 2048)
@@ -61,5 +63,9 @@ public class User {
 
     public void changeTimezone(String timezone) {
         this.timezone = timezone;
+    }
+
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
     }
 }
