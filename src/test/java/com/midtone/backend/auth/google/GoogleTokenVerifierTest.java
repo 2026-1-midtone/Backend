@@ -1,4 +1,4 @@
-package com.midtone.backend.auth.application;
+package com.midtone.backend.auth.google;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

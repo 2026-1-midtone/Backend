@@ -1,5 +1,6 @@
 package com.midtone.backend.global.config;
 
+import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,6 +30,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private RoutineService routineService;
+
+    @MockitoBean
+    private AuthService authService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {

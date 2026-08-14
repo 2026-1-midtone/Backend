@@ -58,4 +58,8 @@ public class User {
     public String getTimezone() { return timezone; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void changeTimezone(String timezone) {
+        this.timezone = timezone;
+    }
 }

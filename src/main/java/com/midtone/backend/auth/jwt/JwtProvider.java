@@ -1,4 +1,4 @@
-package com.midtone.backend.auth.application;
+package com.midtone.backend.auth.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -10,7 +10,6 @@ import java.util.Date;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 
 @Component
 public class JwtProvider {
@@ -40,6 +39,10 @@ public class JwtProvider {
 
     public String createRefreshToken(long userId) {
         return createToken(userId, TokenType.REFRESH, refreshTokenExpiration);
+    }
+
+    public Duration getRefreshTokenExpiration() {
+        return refreshTokenExpiration;
     }
 
     public long getUserId(String token) {

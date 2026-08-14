@@ -1,4 +1,4 @@
-package com.midtone.backend.auth.application;
+package com.midtone.backend.auth.jwt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

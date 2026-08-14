@@ -1,4 +1,4 @@
-package com.midtone.backend.auth.application;
+package com.midtone.backend.auth.google;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -33,7 +33,7 @@ public class GoogleTokenVerifier {
                 throw new InvalidGoogleTokenException("유효하지 않은 구글 토큰입니다.");
             }
             return idToken;
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (GeneralSecurityException | IOException | IllegalArgumentException e) {
             throw new InvalidGoogleTokenException("구글 토큰 검증 중 오류가 발생했습니다.", e);
         }
     }

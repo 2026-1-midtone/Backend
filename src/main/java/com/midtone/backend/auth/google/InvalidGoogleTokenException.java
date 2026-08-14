@@ -1,4 +1,4 @@
-package com.midtone.backend.auth.application;
+package com.midtone.backend.auth.google;
 
 public class InvalidGoogleTokenException extends RuntimeException {
 
