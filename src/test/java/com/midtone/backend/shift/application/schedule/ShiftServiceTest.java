@@ -35,6 +35,8 @@ class ShiftServiceTest {
     private ShiftPatternRepository shiftPatternRepository;
     @Mock
     private CurrentUserIdProvider currentUserIdProvider;
+    @Mock
+    private ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
 
     @InjectMocks
     private ShiftService shiftService;
@@ -125,12 +127,15 @@ class ShiftServiceTest {
         UpdateShiftRequest request = new UpdateShiftRequest("EVENING", "14:00", "22:00");
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(shiftScheduleRepository.findByIdAndUserId(505L, 1L)).thenReturn(Optional.of(shift));
+        when(shiftCoachingRegenerationTrigger.triggerForSingleUpdate(LocalDate.of(2026, 8, 5)))
+                .thenReturn(List.of("2026-08-05", "2026-08-06"));
 
         UpdateShiftResponse response = shiftService.updateShift(505L, request);
 
         assertEquals("EVENING", response.shiftType());
         assertEquals("14:00", response.startTime());
         assertEquals("22:00", response.endTime());
+        assertEquals(List.of("2026-08-05", "2026-08-06"), response.affectedCoachingDates());
     }
 
     @Test
@@ -186,12 +191,15 @@ class ShiftServiceTest {
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
                         1L, LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 14)))
                 .thenReturn(List.of(shift1, shift2));
+        when(shiftCoachingRegenerationTrigger.triggerForRange(LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 14)))
+                .thenReturn(List.of("2026-08-10", "2026-08-11"));
 
         BulkUpdateShiftResponse response = shiftService.bulkUpdateShifts(request);
 
         assertEquals(2, response.updatedCount());
         assertEquals(ShiftType.NIGHT, shift1.getShiftType());
         assertEquals(ShiftType.NIGHT, shift2.getShiftType());
+        assertEquals(List.of("2026-08-10", "2026-08-11"), response.affectedCoachingDates());
     }
 
     @Test

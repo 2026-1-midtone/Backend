@@ -29,14 +29,17 @@ public class ShiftService {
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final ShiftPatternRepository shiftPatternRepository;
     private final CurrentUserIdProvider currentUserIdProvider;
+    private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
 
     public ShiftService(
             ShiftScheduleRepository shiftScheduleRepository,
             ShiftPatternRepository shiftPatternRepository,
-            CurrentUserIdProvider currentUserIdProvider) {
+            CurrentUserIdProvider currentUserIdProvider,
+            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.shiftPatternRepository = shiftPatternRepository;
         this.currentUserIdProvider = currentUserIdProvider;
+        this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
     }
 
     @Transactional
@@ -66,7 +69,8 @@ public class ShiftService {
         ShiftSchedule shift = shiftScheduleRepository.findByIdAndUserId(shiftId, userId)
                 .orElseThrow(() -> new ShiftException(ShiftException.ErrorCode.SHIFT_NOT_FOUND));
         applyUpdate(shift, request);
-        return UpdateShiftResponse.from(shift, List.of());
+        List<String> affectedCoachingDates = shiftCoachingRegenerationTrigger.triggerForSingleUpdate(shift.getWorkDate());
+        return UpdateShiftResponse.from(shift, affectedCoachingDates);
     }
 
     @Transactional
@@ -88,7 +92,8 @@ public class ShiftService {
         List<ShiftSchedule> shifts =
                 shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from, to);
         shifts.forEach(shift -> shift.update(shiftType, null, null));
-        return new BulkUpdateShiftResponse(shifts.size(), List.of());
+        List<String> affectedCoachingDates = shiftCoachingRegenerationTrigger.triggerForRange(from, to);
+        return new BulkUpdateShiftResponse(shifts.size(), affectedCoachingDates);
     }
 
     @Transactional
