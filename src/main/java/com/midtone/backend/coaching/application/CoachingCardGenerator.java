@@ -2,11 +2,11 @@ package com.midtone.backend.coaching.application;
 
 import com.midtone.backend.coaching.domain.CoachingCard.CoachingCardContent;
 import com.midtone.backend.coaching.domain.CoachingCardType;
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.user.domain.CaffeineSensitivity;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -21,7 +21,6 @@ public class CoachingCardGenerator {
             CaffeineSensitivity.LOW, Duration.ofHours(3),
             CaffeineSensitivity.MEDIUM, Duration.ofHours(5),
             CaffeineSensitivity.HIGH, Duration.ofHours(6));
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     public List<CoachingCardContent> generate(
             ShiftSchedule todayShift, CaffeineSensitivity caffeineSensitivity, int preferredNapMinutes) {
@@ -43,7 +42,7 @@ public class CoachingCardGenerator {
     }
 
     private CoachingCardContent lightExposureCard(LocalDateTime shiftStart) {
-        String rationale = "오늘 근무 시작 시각(" + shiftStart.format(TIME_FORMAT) + ") 기준 앞뒤 1시간을 빛 노출 권장 시간으로 계산했습니다.";
+        String rationale = "오늘 근무 시작 시각(" + shiftStart.format(DateTimeDefaults.HOUR_MINUTE) + ") 기준 앞뒤 1시간을 빛 노출 권장 시간으로 계산했습니다.";
         return new CoachingCardContent(
                 CoachingCardType.LIGHT_EXPOSURE, "밝은 빛 노출",
                 shiftStart.minus(LIGHT_EXPOSURE_MARGIN), shiftStart.plus(LIGHT_EXPOSURE_MARGIN),
@@ -64,8 +63,8 @@ public class CoachingCardGenerator {
         LocalDateTime center = shiftEnd.minus(buffer);
         LocalDateTime windowStart = center.minus(CAFFEINE_CUTOFF_MARGIN);
         LocalDateTime windowEnd = center.plus(CAFFEINE_CUTOFF_MARGIN);
-        String description = windowStart.format(TIME_FORMAT) + "~" + windowEnd.format(TIME_FORMAT) + " 사이 카페인 중단";
-        String rationale = "근무 종료 후 목표 취침 시각이 " + shiftEnd.format(TIME_FORMAT) + "이고, 설정된 카페인 민감도(" + sensitivity
+        String description = windowStart.format(DateTimeDefaults.HOUR_MINUTE) + "~" + windowEnd.format(DateTimeDefaults.HOUR_MINUTE) + " 사이 카페인 중단";
+        String rationale = "근무 종료 후 목표 취침 시각이 " + shiftEnd.format(DateTimeDefaults.HOUR_MINUTE) + "이고, 설정된 카페인 민감도(" + sensitivity
                 + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 창입니다.";
         return new CoachingCardContent(CoachingCardType.CAFFEINE_CUTOFF, "카페인 컷오프", windowStart, windowEnd, description, rationale);
     }

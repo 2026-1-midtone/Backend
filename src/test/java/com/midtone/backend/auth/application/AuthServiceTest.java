@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.auth.AuthException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -90,7 +91,8 @@ class AuthServiceTest {
         ReissueRequest request = new ReissueRequest("invalid-token");
         when(jwtProvider.isValid("invalid-token")).thenReturn(false);
 
-        assertThrows(InvalidRefreshTokenException.class, () -> authService.reissue(request));
+        AuthException exception = assertThrows(AuthException.class, () -> authService.reissue(request));
+        assertEquals(AuthException.ErrorCode.INVALID_REFRESH_TOKEN, exception.getErrorCode());
     }
 
     @Test
@@ -99,7 +101,8 @@ class AuthServiceTest {
         stubValidRefreshToken(1L, "refresh-token");
         when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("other-token"));
 
-        assertThrows(InvalidRefreshTokenException.class, () -> authService.reissue(request));
+        AuthException exception = assertThrows(AuthException.class, () -> authService.reissue(request));
+        assertEquals(AuthException.ErrorCode.INVALID_REFRESH_TOKEN, exception.getErrorCode());
     }
 
     @Test

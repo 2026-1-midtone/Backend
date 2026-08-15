@@ -4,6 +4,7 @@ import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -13,8 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TransitionService {
-
-    private static final int LOOKBACK_DAYS = 14;
 
     private final CurrentUserIdProvider currentUserIdProvider;
     private final ShiftScheduleRepository shiftScheduleRepository;
@@ -36,7 +35,7 @@ public class TransitionService {
     public TransitionListResponse getTransitions(LocalDate from, LocalDate to) {
         long userId = currentUserIdProvider.getCurrentUserId();
         List<ShiftSchedule> shifts = shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                userId, from.minusDays(LOOKBACK_DAYS), to);
+                userId, from.minusDays(ShiftScheduleWindow.SCAN_DAYS), to);
         return new TransitionListResponse(collectTransitions(shifts, from));
     }
 

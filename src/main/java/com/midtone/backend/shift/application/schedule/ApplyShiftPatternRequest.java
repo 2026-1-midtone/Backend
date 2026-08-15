@@ -1,5 +1,6 @@
 package com.midtone.backend.shift.application.schedule;
 
+import com.midtone.backend.global.validation.ValidationPatterns;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -10,7 +11,7 @@ import java.util.List;
 
 public record ApplyShiftPatternRequest(
         @NotBlank(message = "패턴 적용 시작일은 필수 입력값입니다.")
-        @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "패턴 적용 시작일은 yyyy-MM-dd 형식이어야 합니다.")
+        @Pattern(regexp = ValidationPatterns.DATE, message = "패턴 적용 시작일은 yyyy-MM-dd 형식이어야 합니다.")
         String startDate,
 
         @NotNull(message = "생성 기간(주)은 필수 입력값입니다.")
@@ -18,7 +19,7 @@ public record ApplyShiftPatternRequest(
         Integer weeks,
 
         @NotEmpty(message = "패턴은 비어있을 수 없습니다.")
-        List<@Pattern(regexp = "DAY|EVENING|NIGHT|OFF", message = "패턴에는 DAY, EVENING, NIGHT, OFF만 포함될 수 있습니다.") String> pattern,
+        List<@Pattern(regexp = ValidationPatterns.SHIFT_TYPE, message = "패턴에는 DAY, EVENING, NIGHT, OFF만 포함될 수 있습니다.") String> pattern,
 
         Boolean saveAsPattern,
 

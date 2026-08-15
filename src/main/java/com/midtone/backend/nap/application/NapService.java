@@ -1,5 +1,6 @@
 package com.midtone.backend.nap.application;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.nap.domain.NapSession;
 import com.midtone.backend.nap.domain.NapSessionRepository;
@@ -7,15 +8,13 @@ import com.midtone.backend.nap.domain.NapStatus;
 import com.midtone.backend.user.domain.UserSettingsRepository;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class NapService {
 
-    private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
+    private static final int MIN_NAP_MINUTES = 1;
+    private static final int MAX_NAP_MINUTES = 180;
 
     private final CurrentUserIdProvider currentUserIdProvider;
     private final NapSessionRepository napSessionRepository;
@@ -38,21 +37,21 @@ public class NapService {
     public ActiveNap startNap(Integer requestedMinutes) {
         long userId = currentUserIdProvider.getCurrentUserId();
         if (napSessionRepository.findFirstByUserIdAndStatusOrderByStartedAtDesc(userId, NapStatus.RUNNING).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 진행 중인 낮잠 타이머가 있습니다.");
+            throw new NapException(NapException.ErrorCode.ALREADY_RUNNING);
         }
 
         com.midtone.backend.user.domain.UserSettings settings = userSettingsRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자 설정을 찾을 수 없습니다."));
-        java.time.LocalDateTime now = java.time.LocalDateTime.now(DEFAULT_ZONE);
+                .orElseThrow(() -> new NapException(NapException.ErrorCode.USER_SETTINGS_NOT_FOUND));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
         long todayCount = napSessionRepository.countByUserIdAndStartedAtBetween(userId,
                 now.toLocalDate().atStartOfDay(), now.toLocalDate().plusDays(1).atStartOfDay());
         if (todayCount >= settings.getMaxNapsPerDay()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "오늘 설정한 최대 낮잠 횟수를 모두 사용했어요.");
+            throw new NapException(NapException.ErrorCode.DAILY_LIMIT_EXCEEDED);
         }
 
         int plannedMinutes = requestedMinutes == null ? settings.getPreferredNapMinutes() : requestedMinutes;
-        if (plannedMinutes < 1 || plannedMinutes > 180) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 시간은 1분 이상 180분 이하여야 합니다.");
+        if (plannedMinutes < MIN_NAP_MINUTES || plannedMinutes > MAX_NAP_MINUTES) {
+            throw new NapException(NapException.ErrorCode.INVALID_DURATION);
         }
 
         NapSession nap = napSessionRepository.save(new NapSession(userId, plannedMinutes, now));
@@ -60,35 +59,40 @@ public class NapService {
     }
 
     public FinishedNap finishNap(long napId, String requestedStatus) {
-        NapStatus status;
-        try {
-            status = NapStatus.valueOf(requestedStatus);
-        } catch (IllegalArgumentException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 상태는 COMPLETED 또는 CANCELED여야 합니다.");
-        }
-        if (status == NapStatus.RUNNING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "낮잠 상태는 COMPLETED 또는 CANCELED여야 합니다.");
-        }
+        NapStatus status = parseFinishedStatus(requestedStatus);
 
         NapSession nap = napSessionRepository.findById(napId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 낮잠 세션을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NapException(NapException.ErrorCode.NAP_NOT_FOUND));
         if (nap.getUserId() != currentUserIdProvider.getCurrentUserId()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
+            throw new NapException(NapException.ErrorCode.ACCESS_DENIED);
         }
         if (nap.getStatus() != NapStatus.RUNNING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 종료된 낮잠 세션입니다.");
+            throw new NapException(NapException.ErrorCode.ALREADY_FINISHED);
         }
 
-        java.time.LocalDateTime endedAt = java.time.LocalDateTime.now(DEFAULT_ZONE);
+        java.time.LocalDateTime endedAt = java.time.LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
         nap.finish(status, endedAt);
         int actualMinutes = (int) Math.max(0, Duration.between(nap.getStartedAt(), endedAt).toMinutes());
         return new FinishedNap(nap.getId(), status.name(), actualMinutes);
     }
 
+    private NapStatus parseFinishedStatus(String requestedStatus) {
+        NapStatus status;
+        try {
+            status = NapStatus.valueOf(requestedStatus);
+        } catch (IllegalArgumentException exception) {
+            throw new NapException(NapException.ErrorCode.INVALID_STATUS);
+        }
+        if (status == NapStatus.RUNNING) {
+            throw new NapException(NapException.ErrorCode.INVALID_STATUS);
+        }
+        return status;
+    }
+
     private ActiveNap toActiveNap(NapSession nap) {
-        OffsetDateTime startedAt = nap.getStartedAt().atZone(DEFAULT_ZONE).toOffsetDateTime();
-        OffsetDateTime expectedEndAt = nap.getExpectedEndAt().atZone(DEFAULT_ZONE).toOffsetDateTime();
-        long remainingSeconds = Math.max(0, Duration.between(OffsetDateTime.now(DEFAULT_ZONE), expectedEndAt).toSeconds());
+        OffsetDateTime startedAt = nap.getStartedAt().atZone(DateTimeDefaults.DEFAULT_ZONE).toOffsetDateTime();
+        OffsetDateTime expectedEndAt = nap.getExpectedEndAt().atZone(DateTimeDefaults.DEFAULT_ZONE).toOffsetDateTime();
+        long remainingSeconds = Math.max(0, Duration.between(OffsetDateTime.now(DateTimeDefaults.DEFAULT_ZONE), expectedEndAt).toSeconds());
         return new ActiveNap(nap.getId(), nap.getPlannedMinutes(), startedAt, expectedEndAt, remainingSeconds, nap.getStatus().name());
     }
 

@@ -1,16 +1,17 @@
 package com.midtone.backend.home.application;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.shift.application.schedule.CompletenessResponse;
-import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
@@ -18,23 +19,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class HomeScheduleSectionBuilder {
 
-    private static final int NEXT_SHIFT_LOOKAHEAD_DAYS = 14;
     private static final int MIN_SCHEDULE_WEEKS = 4;
     private static final String ALERT_TYPE_NO_SCHEDULE = "NO_SCHEDULE";
     private static final String ALERT_TYPE_INSUFFICIENT_SCHEDULE = "INSUFFICIENT_SCHEDULE";
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final TransitionDetector transitionDetector;
-    private final ShiftService shiftService;
+    private final ShiftCompletenessCalculator shiftCompletenessCalculator;
 
     public HomeScheduleSectionBuilder(
             ShiftScheduleRepository shiftScheduleRepository,
             TransitionDetector transitionDetector,
-            ShiftService shiftService) {
+            ShiftCompletenessCalculator shiftCompletenessCalculator) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.transitionDetector = transitionDetector;
-        this.shiftService = shiftService;
+        this.shiftCompletenessCalculator = shiftCompletenessCalculator;
     }
 
     public ScheduleSection build(long userId, LocalDate date) {
@@ -59,7 +58,7 @@ public class HomeScheduleSectionBuilder {
 
     private HomeDashboardResponse.NextShift findNextShift(long userId, LocalDate date) {
         List<ShiftSchedule> upcoming = shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                userId, date.plusDays(1), date.plusDays(NEXT_SHIFT_LOOKAHEAD_DAYS));
+                userId, date.plusDays(1), date.plusDays(ShiftScheduleWindow.SCAN_DAYS));
         return upcoming.stream()
                 .filter(this::isSchedulableShift)
                 .findFirst()
@@ -82,7 +81,7 @@ public class HomeScheduleSectionBuilder {
     }
 
     private HomeDashboardResponse.ScheduleAlert buildScheduleAlert() {
-        CompletenessResponse completeness = shiftService.getCompleteness(MIN_SCHEDULE_WEEKS);
+        CompletenessResponse completeness = shiftCompletenessCalculator.calculate(MIN_SCHEDULE_WEEKS);
         if (completeness.confirmedDays() == 0) {
             return new HomeDashboardResponse.ScheduleAlert(ALERT_TYPE_NO_SCHEDULE, completeness.requiredDays());
         }
@@ -93,7 +92,7 @@ public class HomeScheduleSectionBuilder {
     }
 
     private String formatTime(LocalTime time) {
-        return time == null ? null : time.format(TIME_FORMAT);
+        return time == null ? null : time.format(DateTimeDefaults.HOUR_MINUTE);
     }
 
     public record ScheduleSection(

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
+import com.midtone.backend.user.application.UserException;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
 import java.util.Optional;
@@ -47,7 +48,8 @@ class UserServiceTest {
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> userService.getMyProfile());
+        UserException exception = assertThrows(UserException.class, () -> userService.getMyProfile());
+        assertEquals(UserException.ErrorCode.NOT_FOUND, exception.getErrorCode());
     }
 
     @Test

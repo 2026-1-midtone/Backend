@@ -4,6 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.midtone.backend.auth.AuthException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
@@ -30,11 +31,11 @@ public class GoogleTokenVerifier {
         try {
             GoogleIdToken idToken = verifier.verify(idTokenString);
             if (idToken == null) {
-                throw new InvalidGoogleTokenException("유효하지 않은 구글 토큰입니다.");
+                throw new AuthException(AuthException.ErrorCode.INVALID_GOOGLE_TOKEN);
             }
             return idToken;
         } catch (GeneralSecurityException | IOException | IllegalArgumentException e) {
-            throw new InvalidGoogleTokenException("구글 토큰 검증 중 오류가 발생했습니다.", e);
+            throw new AuthException(AuthException.ErrorCode.GOOGLE_TOKEN_VERIFICATION_FAILED, e);
         }
     }
 

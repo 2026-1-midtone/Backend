@@ -7,6 +7,8 @@ import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
 import com.midtone.backend.shift.application.pattern.ShiftPatternService;
+import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
+import com.midtone.backend.shift.application.schedule.ShiftPatternApplier;
 import com.midtone.backend.shift.application.schedule.ShiftService;
 import com.midtone.backend.transition.application.TransitionService;
 import com.midtone.backend.user.application.notification.NotificationSettingService;
@@ -60,6 +62,12 @@ class SecurityConfigTest {
 
     @MockitoBean
     private ShiftService shiftService;
+
+    @MockitoBean
+    private ShiftPatternApplier shiftPatternApplier;
+
+    @MockitoBean
+    private ShiftCompletenessCalculator shiftCompletenessCalculator;
 
     @MockitoBean
     private ShiftPatternService shiftPatternService;

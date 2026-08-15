@@ -6,13 +6,15 @@ import com.midtone.backend.routine.domain.TaskStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RoutineService {
+
+    private static final String PERIOD_7D = "7d";
+    private static final String PERIOD_30D = "30d";
 
     private final CurrentUserIdProvider currentUserIdProvider;
     private final RoutineTaskRepository routineTaskRepository;
@@ -35,20 +37,11 @@ public class RoutineService {
     }
 
     public UpdatedTask updateTaskStatus(long taskId, String requestedStatus) {
-        TaskStatus status;
-        try {
-            status = TaskStatus.valueOf(requestedStatus);
-        } catch (IllegalArgumentException exception) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "루틴 상태는 PENDING, DONE, SKIPPED 중 하나여야 합니다.");
-        }
-
+        TaskStatus status = parseStatus(requestedStatus);
         com.midtone.backend.routine.domain.RoutineTask task = routineTaskRepository.findById(taskId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,
-                        "해당 루틴 항목을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RoutineException(RoutineException.ErrorCode.TASK_NOT_FOUND));
         if (task.getUserId() != currentUserIdProvider.getCurrentUserId()) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN,
-                    "접근 권한이 없습니다.");
+            throw new RoutineException(RoutineException.ErrorCode.ACCESS_DENIED);
         }
         task.updateStatus(status, LocalDateTime.now());
         return new UpdatedTask(task.getId(), status.name(), progressFor(task.getTaskDate()));
@@ -67,11 +60,10 @@ public class RoutineService {
     }
 
     public RoutineReport getReport(String period) {
-        if (!"7d".equals(period) && !"30d".equals(period)) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "period는 7d 또는 30d만 지원합니다.");
+        if (!PERIOD_7D.equals(period) && !PERIOD_30D.equals(period)) {
+            throw new RoutineException(RoutineException.ErrorCode.INVALID_PERIOD);
         }
-        int days = "7d".equals(period) ? 7 : 30;
+        int days = PERIOD_7D.equals(period) ? 7 : 30;
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusDays(days - 1L);
         List<com.midtone.backend.routine.domain.RoutineTask> tasks = routineTaskRepository
@@ -90,6 +82,14 @@ public class RoutineService {
         }
         LocalDate lastCheckinDate = completedDates.stream().max(LocalDate::compareTo).orElse(null);
         return new RoutineReport(period, from, to, completionRate, new Streak(current, longest, lastCheckinDate));
+    }
+
+    private TaskStatus parseStatus(String requestedStatus) {
+        try {
+            return TaskStatus.valueOf(requestedStatus);
+        } catch (IllegalArgumentException exception) {
+            throw new RoutineException(RoutineException.ErrorCode.INVALID_STATUS);
+        }
     }
 
     private List<com.midtone.backend.routine.domain.RoutineTask> findTasks(LocalDate date) {

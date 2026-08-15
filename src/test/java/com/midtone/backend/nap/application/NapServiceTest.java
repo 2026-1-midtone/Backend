@@ -1,6 +1,7 @@
 package com.midtone.backend.nap.application;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 
 import com.midtone.backend.global.user.CurrentUserIdProvider;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class NapServiceTest {
@@ -42,8 +42,37 @@ class NapServiceTest {
 
         NapService napService = new NapService(currentUserIdProvider, napSessionRepository, userSettingsRepository);
 
-        assertThatThrownBy(() -> napService.startNap(20))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("오늘 설정한 최대 낮잠 횟수를 모두 사용했어요.");
+        NapException exception = assertThrows(NapException.class, () -> napService.startNap(20));
+        assertEquals(NapException.ErrorCode.DAILY_LIMIT_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
+    void 이미_진행중인_낮잠이_있으면_예외를_던진다() {
+        given(currentUserIdProvider.getCurrentUserId()).willReturn(1L);
+        given(napSessionRepository.findFirstByUserIdAndStatusOrderByStartedAtDesc(1L, NapStatus.RUNNING))
+                .willReturn(java.util.Optional.of(org.mockito.Mockito.mock(com.midtone.backend.nap.domain.NapSession.class)));
+
+        NapService napService = new NapService(currentUserIdProvider, napSessionRepository, userSettingsRepository);
+
+        NapException exception = assertThrows(NapException.class, () -> napService.startNap(20));
+        assertEquals(NapException.ErrorCode.ALREADY_RUNNING, exception.getErrorCode());
+    }
+
+    @Test
+    void 존재하지_않는_낮잠_세션을_종료하려하면_예외를_던진다() {
+        given(napSessionRepository.findById(99L)).willReturn(java.util.Optional.empty());
+
+        NapService napService = new NapService(currentUserIdProvider, napSessionRepository, userSettingsRepository);
+
+        NapException exception = assertThrows(NapException.class, () -> napService.finishNap(99L, "COMPLETED"));
+        assertEquals(NapException.ErrorCode.NAP_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void 잘못된_상태값으로_종료하면_예외를_던진다() {
+        NapService napService = new NapService(currentUserIdProvider, napSessionRepository, userSettingsRepository);
+
+        NapException exception = assertThrows(NapException.class, () -> napService.finishNap(1L, "RUNNING"));
+        assertEquals(NapException.ErrorCode.INVALID_STATUS, exception.getErrorCode());
     }
 }

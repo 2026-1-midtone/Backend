@@ -4,6 +4,7 @@ import com.midtone.backend.coaching.domain.CoachingCard.CoachingCardContent;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.user.domain.CaffeineSensitivity;
 import com.midtone.backend.user.domain.UserSettings;
 import com.midtone.backend.user.domain.UserSettingsRepository;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class DailyCoachingGenerator {
 
-    private static final int NEXT_SHIFT_LOOKAHEAD_DAYS = 14;
     private static final CaffeineSensitivity DEFAULT_SENSITIVITY = CaffeineSensitivity.MEDIUM;
 
     private final ShiftScheduleRepository shiftScheduleRepository;
@@ -52,7 +52,7 @@ public class DailyCoachingGenerator {
     }
 
     private LocalDateTime findNextShiftStartAt(long userId, LocalDate date) {
-        LocalDate searchTo = date.plusDays(NEXT_SHIFT_LOOKAHEAD_DAYS);
+        LocalDate searchTo = date.plusDays(ShiftScheduleWindow.SCAN_DAYS);
         List<ShiftSchedule> upcoming = shiftScheduleRepository
                 .findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, date.plusDays(1), searchTo);
         return upcoming.stream()

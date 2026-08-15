@@ -18,17 +18,19 @@ public record HomeDashboardResponse(
     public static HomeDashboardResponse of(
             LocalDate date,
             HomeScheduleSectionBuilder.ScheduleSection scheduleSection,
-            HomeActivitySectionBuilder.ActivitySection activitySection,
+            RoutineProgress routineProgress,
+            Streak streak,
+            NapService.ActiveNap activeNap,
             List<TopCoachingCard> topCoachingCards) {
         return new HomeDashboardResponse(
                 date.toString(),
                 scheduleSection.todayShift(),
                 scheduleSection.nextShift(),
                 scheduleSection.transitionDay(),
-                activitySection.routineProgress(),
+                routineProgress,
                 topCoachingCards,
-                activitySection.streak(),
-                activitySection.activeNap(),
+                streak,
+                activeNap,
                 scheduleSection.scheduleAlert());
     }
 

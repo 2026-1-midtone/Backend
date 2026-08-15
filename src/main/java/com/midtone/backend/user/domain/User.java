@@ -1,5 +1,6 @@
 package com.midtone.backend.user.domain;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,7 +15,7 @@ public class User {
 
     public static final int NICKNAME_MAX_LENGTH = 50;
 
-    private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
+    private static final String DEFAULT_TIMEZONE = DateTimeDefaults.DEFAULT_ZONE.getId();
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

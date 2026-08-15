@@ -1,5 +1,6 @@
 package com.midtone.backend.auth.application;
 
+import com.midtone.backend.auth.AuthException;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -73,15 +74,15 @@ public class AuthService {
 
     private void validateRefreshToken(String refreshToken) {
         if (!isStructurallyValidRefreshToken(refreshToken)) {
-            throw new InvalidRefreshTokenException();
+            throw new AuthException(AuthException.ErrorCode.INVALID_REFRESH_TOKEN);
         }
     }
 
     private void validateTokenMatchesStored(long userId, String refreshToken) {
         String storedRefreshToken = refreshTokenRepository.findByUserId(userId)
-                .orElseThrow(InvalidRefreshTokenException::new);
+                .orElseThrow(() -> new AuthException(AuthException.ErrorCode.INVALID_REFRESH_TOKEN));
         if (!storedRefreshToken.equals(refreshToken)) {
-            throw new InvalidRefreshTokenException();
+            throw new AuthException(AuthException.ErrorCode.INVALID_REFRESH_TOKEN);
         }
     }
 

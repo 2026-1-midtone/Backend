@@ -2,6 +2,7 @@ package com.midtone.backend.shift.application.schedule;
 
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.util.List;
@@ -10,8 +11,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TransitionDetector {
-
-    private static final int LOOKBACK_DAYS = 14;
 
     private final ShiftScheduleRepository shiftScheduleRepository;
 
@@ -24,7 +23,7 @@ public class TransitionDetector {
             return Optional.empty();
         }
         List<ShiftSchedule> priorShifts = shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                userId, date.minusDays(LOOKBACK_DAYS), date.minusDays(1));
+                userId, date.minusDays(ShiftScheduleWindow.SCAN_DAYS), date.minusDays(1));
         return findLastNonOffType(priorShifts)
                 .filter(fromType -> fromType != todayShiftType)
                 .map(fromType -> new TransitionInfo(fromType, todayShiftType));

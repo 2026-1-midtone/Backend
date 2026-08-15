@@ -2,8 +2,8 @@ package com.midtone.backend.coaching.application;
 
 import com.midtone.backend.coaching.domain.CoachingCard;
 import com.midtone.backend.coaching.domain.DailyCoaching;
+import com.midtone.backend.global.time.DateTimeDefaults;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 public record CoachingCardDetailResponse(
         Long cardId,
@@ -13,8 +13,6 @@ public record CoachingCardDetailResponse(
         String windowEnd,
         String rationale,
         BasedOn basedOn) {
-
-    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
     public static CoachingCardDetailResponse of(CoachingCard card, DailyCoaching dailyCoaching) {
         BasedOn basedOn = new BasedOn(
@@ -32,7 +30,7 @@ public record CoachingCardDetailResponse(
     }
 
     private static String format(LocalDateTime dateTime) {
-        return dateTime == null ? null : dateTime.atZone(ZONE).toOffsetDateTime().toString();
+        return dateTime == null ? null : dateTime.atZone(DateTimeDefaults.DEFAULT_ZONE).toOffsetDateTime().toString();
     }
 
     public record BasedOn(String todayShiftType, String nextShiftStartAt, String caffeineSensitivity) {

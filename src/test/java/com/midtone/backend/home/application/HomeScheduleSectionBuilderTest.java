@@ -7,7 +7,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.midtone.backend.shift.application.schedule.CompletenessResponse;
-import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
@@ -31,7 +31,7 @@ class HomeScheduleSectionBuilderTest {
     @Mock
     private TransitionDetector transitionDetector;
     @Mock
-    private ShiftService shiftService;
+    private ShiftCompletenessCalculator shiftCompletenessCalculator;
 
     @InjectMocks
     private HomeScheduleSectionBuilder homeScheduleSectionBuilder;
@@ -82,7 +82,7 @@ class HomeScheduleSectionBuilderTest {
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
                         1L, today.plusDays(1), today.plusDays(14)))
                 .thenReturn(List.of());
-        when(shiftService.getCompleteness(4)).thenReturn(new CompletenessResponse(28, 0, 28, List.of()));
+        when(shiftCompletenessCalculator.calculate(4)).thenReturn(new CompletenessResponse(28, 0, 28, List.of()));
 
         HomeScheduleSectionBuilder.ScheduleSection section = homeScheduleSectionBuilder.build(1L, today);
 
@@ -97,7 +97,7 @@ class HomeScheduleSectionBuilderTest {
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
                         1L, today.plusDays(1), today.plusDays(14)))
                 .thenReturn(List.of());
-        when(shiftService.getCompleteness(4)).thenReturn(new CompletenessResponse(28, 24, 4, List.of()));
+        when(shiftCompletenessCalculator.calculate(4)).thenReturn(new CompletenessResponse(28, 24, 4, List.of()));
 
         HomeScheduleSectionBuilder.ScheduleSection section = homeScheduleSectionBuilder.build(1L, today);
 
@@ -120,6 +120,6 @@ class HomeScheduleSectionBuilderTest {
     }
 
     private void stubSufficientSchedule() {
-        lenient().when(shiftService.getCompleteness(4)).thenReturn(new CompletenessResponse(28, 28, 0, List.of()));
+        lenient().when(shiftCompletenessCalculator.calculate(4)).thenReturn(new CompletenessResponse(28, 28, 0, List.of()));
     }
 }

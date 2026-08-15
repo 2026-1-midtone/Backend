@@ -2,6 +2,7 @@ package com.midtone.backend.user.application.profile;
 
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
+import com.midtone.backend.user.application.UserException;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,7 @@ public class UserService {
 
     private User getCurrentUser() {
         long userId = currentUserIdProvider.getCurrentUserId();
-        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(UserException.ErrorCode.NOT_FOUND));
     }
 }

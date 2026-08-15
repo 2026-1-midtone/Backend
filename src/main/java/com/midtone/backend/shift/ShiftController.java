@@ -7,7 +7,9 @@ import com.midtone.backend.shift.application.schedule.BulkUpdateShiftResponse;
 import com.midtone.backend.shift.application.schedule.CompletenessResponse;
 import com.midtone.backend.shift.application.schedule.CreateShiftRequest;
 import com.midtone.backend.shift.application.schedule.GetShiftsRequest;
+import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.ShiftListResponse;
+import com.midtone.backend.shift.application.schedule.ShiftPatternApplier;
 import com.midtone.backend.shift.application.schedule.ShiftResponse;
 import com.midtone.backend.shift.application.schedule.ShiftService;
 import com.midtone.backend.shift.application.schedule.UpdateShiftRequest;
@@ -31,9 +33,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ShiftController {
 
     private final ShiftService shiftService;
+    private final ShiftPatternApplier shiftPatternApplier;
+    private final ShiftCompletenessCalculator shiftCompletenessCalculator;
 
-    public ShiftController(ShiftService shiftService) {
+    public ShiftController(
+            ShiftService shiftService,
+            ShiftPatternApplier shiftPatternApplier,
+            ShiftCompletenessCalculator shiftCompletenessCalculator) {
         this.shiftService = shiftService;
+        this.shiftPatternApplier = shiftPatternApplier;
+        this.shiftCompletenessCalculator = shiftCompletenessCalculator;
     }
 
     @PostMapping
@@ -70,14 +79,14 @@ public class ShiftController {
     @PostMapping("/pattern")
     public ResponseEntity<ApplyShiftPatternResponse> applyShiftPattern(
             @Valid @RequestBody ApplyShiftPatternRequest request) {
-        ApplyShiftPatternResponse response = shiftService.applyShiftPattern(request);
+        ApplyShiftPatternResponse response = shiftPatternApplier.apply(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/completeness")
     public ResponseEntity<CompletenessResponse> getCompleteness(
             @RequestParam(required = false, defaultValue = "4") int weeks) {
-        CompletenessResponse response = shiftService.getCompleteness(weeks);
+        CompletenessResponse response = shiftCompletenessCalculator.calculate(weeks);
         return ResponseEntity.ok(response);
     }
 }
