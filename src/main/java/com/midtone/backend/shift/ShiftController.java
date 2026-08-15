@@ -1,7 +1,10 @@
 package com.midtone.backend.shift;
 
+import com.midtone.backend.shift.application.schedule.ApplyShiftPatternRequest;
+import com.midtone.backend.shift.application.schedule.ApplyShiftPatternResponse;
 import com.midtone.backend.shift.application.schedule.BulkUpdateShiftRequest;
 import com.midtone.backend.shift.application.schedule.BulkUpdateShiftResponse;
+import com.midtone.backend.shift.application.schedule.CompletenessResponse;
 import com.midtone.backend.shift.application.schedule.CreateShiftRequest;
 import com.midtone.backend.shift.application.schedule.GetShiftsRequest;
 import com.midtone.backend.shift.application.schedule.ShiftListResponse;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -60,6 +64,20 @@ public class ShiftController {
     @PatchMapping(":bulk")
     public ResponseEntity<BulkUpdateShiftResponse> bulkUpdateShifts(@Valid @RequestBody BulkUpdateShiftRequest request) {
         BulkUpdateShiftResponse response = shiftService.bulkUpdateShifts(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pattern")
+    public ResponseEntity<ApplyShiftPatternResponse> applyShiftPattern(
+            @Valid @RequestBody ApplyShiftPatternRequest request) {
+        ApplyShiftPatternResponse response = shiftService.applyShiftPattern(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/completeness")
+    public ResponseEntity<CompletenessResponse> getCompleteness(
+            @RequestParam(required = false, defaultValue = "4") int weeks) {
+        CompletenessResponse response = shiftService.getCompleteness(weeks);
         return ResponseEntity.ok(response);
     }
 }

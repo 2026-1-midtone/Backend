@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.shift.application.ShiftException;
+import com.midtone.backend.shift.domain.ShiftPattern;
+import com.midtone.backend.shift.domain.ShiftPatternRepository;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftTime;
@@ -28,6 +31,8 @@ class ShiftServiceTest {
 
     @Mock
     private ShiftScheduleRepository shiftScheduleRepository;
+    @Mock
+    private ShiftPatternRepository shiftPatternRepository;
     @Mock
     private CurrentUserIdProvider currentUserIdProvider;
 
@@ -196,5 +201,81 @@ class ShiftServiceTest {
         ShiftException exception =
                 assertThrows(ShiftException.class, () -> shiftService.bulkUpdateShifts(request));
         assertEquals(ShiftException.ErrorCode.BULK_UPDATE_RANGE_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
+    void 반복_패턴으로_새_일정을_생성한다() {
+        ApplyShiftPatternRequest request = new ApplyShiftPatternRequest(
+                "2026-09-01", 4, List.of("DAY", "EVENING", "NIGHT", "OFF"), null, null);
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(List.of());
+
+        ApplyShiftPatternResponse response = shiftService.applyShiftPattern(request);
+
+        assertEquals(28, response.createdCount());
+        assertEquals(0, response.updatedCount());
+        assertNull(response.patternId());
+        assertEquals(28, response.completeness().requiredDays());
+    }
+
+    @Test
+    void 기존_일정이_있으면_수정하고_생성_수를_구분한다() {
+        ApplyShiftPatternRequest request = new ApplyShiftPatternRequest(
+                "2026-09-01", 4, List.of("DAY", "EVENING", "NIGHT", "OFF"), null, null);
+        ShiftSchedule existing = new ShiftSchedule(
+                1L, LocalDate.of(2026, 9, 1), ShiftType.OFF, new ShiftTime(null, null));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(List.of(existing));
+
+        ApplyShiftPatternResponse response = shiftService.applyShiftPattern(request);
+
+        assertEquals(27, response.createdCount());
+        assertEquals(1, response.updatedCount());
+        assertEquals(ShiftType.DAY, existing.getShiftType());
+    }
+
+    @Test
+    void saveAsPattern이_true이면_패턴을_저장한다() {
+        ApplyShiftPatternRequest request = new ApplyShiftPatternRequest(
+                "2026-09-01", 4, List.of("DAY", "EVENING", "NIGHT", "OFF"), true, "내 패턴");
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(List.of());
+
+        shiftService.applyShiftPattern(request);
+
+        verify(shiftPatternRepository).save(any(ShiftPattern.class));
+    }
+
+    @Test
+    void saveAsPattern이_true인데_이름이_없으면_예외를_던진다() {
+        ApplyShiftPatternRequest request = new ApplyShiftPatternRequest(
+                "2026-09-01", 4, List.of("DAY", "EVENING", "NIGHT", "OFF"), true, null);
+
+        ShiftException exception =
+                assertThrows(ShiftException.class, () -> shiftService.applyShiftPattern(request));
+        assertEquals(ShiftException.ErrorCode.PATTERN_NAME_REQUIRED, exception.getErrorCode());
+    }
+
+    @Test
+    void 최소_4주_충족_현황을_조회한다() {
+        LocalDate today = LocalDate.now();
+        ShiftSchedule confirmedShift = new ShiftSchedule(1L, today, ShiftType.DAY, new ShiftTime(null, null));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, today, today.plusDays(27)))
+                .thenReturn(List.of(confirmedShift));
+
+        CompletenessResponse response = shiftService.getCompleteness(4);
+
+        assertEquals(28, response.requiredDays());
+        assertEquals(1, response.confirmedDays());
+        assertEquals(27, response.remainingDays());
+        assertEquals(27, response.missingDates().size());
     }
 }
