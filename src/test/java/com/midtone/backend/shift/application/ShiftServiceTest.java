@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.midtone.backend.global.user.CurrentUserIdProvider;
@@ -14,6 +15,7 @@ import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -106,5 +108,59 @@ class ShiftServiceTest {
         GetShiftsRequest request = new GetShiftsRequest("2026-08-31", "2026-08-01");
 
         assertThrows(InvalidDateRangeException.class, () -> shiftService.getShifts(request));
+    }
+
+    @Test
+    void 근무_일정을_수정한다() {
+        ShiftSchedule shift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 5), ShiftType.OFF, new ShiftTime(null, null));
+        UpdateShiftRequest request = new UpdateShiftRequest("EVENING", "14:00", "22:00");
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByIdAndUserId(505L, 1L)).thenReturn(Optional.of(shift));
+
+        UpdateShiftResponse response = shiftService.updateShift(505L, request);
+
+        assertEquals("EVENING", response.shiftType());
+        assertEquals("14:00", response.startTime());
+        assertEquals("22:00", response.endTime());
+    }
+
+    @Test
+    void 존재하지_않는_일정을_수정하면_예외를_던진다() {
+        UpdateShiftRequest request = new UpdateShiftRequest("EVENING", "14:00", "22:00");
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByIdAndUserId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(ShiftNotFoundException.class, () -> shiftService.updateShift(999L, request));
+    }
+
+    @Test
+    void 근무_일정을_삭제한다() {
+        ShiftSchedule shift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 5), ShiftType.OFF, new ShiftTime(null, null));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findById(505L)).thenReturn(Optional.of(shift));
+
+        shiftService.deleteShift(505L);
+
+        verify(shiftScheduleRepository).delete(shift);
+    }
+
+    @Test
+    void 존재하지_않는_일정을_삭제하면_예외를_던진다() {
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ShiftNotFoundException.class, () -> shiftService.deleteShift(999L));
+    }
+
+    @Test
+    void 타인의_일정을_삭제하면_예외를_던진다() {
+        ShiftSchedule shift = new ShiftSchedule(
+                2L, LocalDate.of(2026, 8, 5), ShiftType.OFF, new ShiftTime(null, null));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findById(505L)).thenReturn(Optional.of(shift));
+
+        assertThrows(ShiftAccessDeniedException.class, () -> shiftService.deleteShift(505L));
     }
 }

@@ -44,6 +44,24 @@ public class ShiftService {
         return ShiftListResponse.from(shifts);
     }
 
+    @Transactional
+    public UpdateShiftResponse updateShift(Long shiftId, UpdateShiftRequest request) {
+        long userId = currentUserIdProvider.getCurrentUserId();
+        ShiftSchedule shift = shiftScheduleRepository.findByIdAndUserId(shiftId, userId)
+                .orElseThrow(ShiftNotFoundException::new);
+        applyUpdate(shift, request);
+        return UpdateShiftResponse.from(shift, List.of());
+    }
+
+    @Transactional
+    public void deleteShift(Long shiftId) {
+        long userId = currentUserIdProvider.getCurrentUserId();
+        ShiftSchedule shift = shiftScheduleRepository.findById(shiftId)
+                .orElseThrow(ShiftNotFoundException::new);
+        validateOwnership(shift, userId);
+        shiftScheduleRepository.delete(shift);
+    }
+
     private void validateNoDuplicate(long userId, LocalDate workDate) {
         if (shiftScheduleRepository.existsByUserIdAndWorkDate(userId, workDate)) {
             throw new DuplicateShiftException();
@@ -54,6 +72,17 @@ public class ShiftService {
         if (to.isBefore(from)) {
             throw new InvalidDateRangeException();
         }
+    }
+
+    private void validateOwnership(ShiftSchedule shift, long userId) {
+        if (!shift.getUserId().equals(userId)) {
+            throw new ShiftAccessDeniedException();
+        }
+    }
+
+    private void applyUpdate(ShiftSchedule shift, UpdateShiftRequest request) {
+        ShiftType shiftType = request.shiftType() == null ? null : ShiftType.valueOf(request.shiftType());
+        shift.update(shiftType, parseTime(request.startTime()), parseTime(request.endTime()));
     }
 
     private ShiftSchedule buildShift(long userId, LocalDate workDate, CreateShiftRequest request) {

@@ -68,6 +68,18 @@ public class ShiftSchedule {
         this.confirmed = true;
     }
 
+    public void update(ShiftType shiftType, LocalTime startTime, LocalTime endTime) {
+        if (shiftType != null) {
+            this.shiftType = shiftType;
+        }
+        if (startTime != null) {
+            this.startTime = startTime;
+        }
+        if (endTime != null) {
+            this.endTime = endTime;
+        }
+    }
+
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public LocalDate getWorkDate() { return workDate; }
