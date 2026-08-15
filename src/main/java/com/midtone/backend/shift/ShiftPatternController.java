@@ -1,9 +1,9 @@
 package com.midtone.backend.shift;
 
-import com.midtone.backend.shift.application.SaveShiftPatternRequest;
-import com.midtone.backend.shift.application.ShiftPatternListResponse;
-import com.midtone.backend.shift.application.ShiftPatternResponse;
-import com.midtone.backend.shift.application.ShiftPatternService;
+import com.midtone.backend.shift.application.pattern.SaveShiftPatternRequest;
+import com.midtone.backend.shift.application.pattern.ShiftPatternListResponse;
+import com.midtone.backend.shift.application.pattern.ShiftPatternResponse;
+import com.midtone.backend.shift.application.pattern.ShiftPatternService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

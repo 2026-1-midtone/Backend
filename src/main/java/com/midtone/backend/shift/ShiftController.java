@@ -1,14 +1,14 @@
 package com.midtone.backend.shift;
 
-import com.midtone.backend.shift.application.BulkUpdateShiftRequest;
-import com.midtone.backend.shift.application.BulkUpdateShiftResponse;
-import com.midtone.backend.shift.application.CreateShiftRequest;
-import com.midtone.backend.shift.application.GetShiftsRequest;
-import com.midtone.backend.shift.application.ShiftListResponse;
-import com.midtone.backend.shift.application.ShiftResponse;
-import com.midtone.backend.shift.application.ShiftService;
-import com.midtone.backend.shift.application.UpdateShiftRequest;
-import com.midtone.backend.shift.application.UpdateShiftResponse;
+import com.midtone.backend.shift.application.schedule.BulkUpdateShiftRequest;
+import com.midtone.backend.shift.application.schedule.BulkUpdateShiftResponse;
+import com.midtone.backend.shift.application.schedule.CreateShiftRequest;
+import com.midtone.backend.shift.application.schedule.GetShiftsRequest;
+import com.midtone.backend.shift.application.schedule.ShiftListResponse;
+import com.midtone.backend.shift.application.schedule.ShiftResponse;
+import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.shift.application.schedule.UpdateShiftRequest;
+import com.midtone.backend.shift.application.schedule.UpdateShiftResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
