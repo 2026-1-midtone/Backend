@@ -7,12 +7,15 @@ import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ShiftService {
+
+    private static final int MAX_BULK_RANGE_DAYS = 90;
 
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final CurrentUserIdProvider currentUserIdProvider;
@@ -62,6 +65,19 @@ public class ShiftService {
         shiftScheduleRepository.delete(shift);
     }
 
+    @Transactional
+    public BulkUpdateShiftResponse bulkUpdateShifts(BulkUpdateShiftRequest request) {
+        LocalDate from = LocalDate.parse(request.from());
+        LocalDate to = LocalDate.parse(request.to());
+        validateBulkRange(from, to);
+        ShiftType shiftType = ShiftType.valueOf(request.shiftType());
+        long userId = currentUserIdProvider.getCurrentUserId();
+        List<ShiftSchedule> shifts =
+                shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from, to);
+        shifts.forEach(shift -> shift.update(shiftType, null, null));
+        return new BulkUpdateShiftResponse(shifts.size(), List.of());
+    }
+
     private void validateNoDuplicate(long userId, LocalDate workDate) {
         if (shiftScheduleRepository.existsByUserIdAndWorkDate(userId, workDate)) {
             throw new DuplicateShiftException();
@@ -77,6 +93,12 @@ public class ShiftService {
     private void validateOwnership(ShiftSchedule shift, long userId) {
         if (!shift.getUserId().equals(userId)) {
             throw new ShiftAccessDeniedException();
+        }
+    }
+
+    private void validateBulkRange(LocalDate from, LocalDate to) {
+        if (ChronoUnit.DAYS.between(from, to) > MAX_BULK_RANGE_DAYS) {
+            throw new BulkUpdateRangeException();
         }
     }
 

@@ -1,5 +1,7 @@
 package com.midtone.backend.shift;
 
+import com.midtone.backend.shift.application.BulkUpdateShiftRequest;
+import com.midtone.backend.shift.application.BulkUpdateShiftResponse;
 import com.midtone.backend.shift.application.CreateShiftRequest;
 import com.midtone.backend.shift.application.GetShiftsRequest;
 import com.midtone.backend.shift.application.ShiftListResponse;
@@ -53,5 +55,11 @@ public class ShiftController {
     public ResponseEntity<Void> deleteShift(@PathVariable Long shiftId) {
         shiftService.deleteShift(shiftId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping(":bulk")
+    public ResponseEntity<BulkUpdateShiftResponse> bulkUpdateShifts(@Valid @RequestBody BulkUpdateShiftRequest request) {
+        BulkUpdateShiftResponse response = shiftService.bulkUpdateShifts(request);
+        return ResponseEntity.ok(response);
     }
 }

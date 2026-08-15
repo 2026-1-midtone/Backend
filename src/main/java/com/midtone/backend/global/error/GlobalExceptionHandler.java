@@ -2,6 +2,7 @@ package com.midtone.backend.global.error;
 
 import com.midtone.backend.auth.application.InvalidRefreshTokenException;
 import com.midtone.backend.auth.google.InvalidGoogleTokenException;
+import com.midtone.backend.shift.application.BulkUpdateRangeException;
 import com.midtone.backend.shift.application.DuplicateShiftException;
 import com.midtone.backend.shift.application.InvalidDateRangeException;
 import com.midtone.backend.shift.application.ShiftAccessDeniedException;
@@ -67,6 +68,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ShiftAccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleShiftAccessDenied(ShiftAccessDeniedException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(BulkUpdateRangeException.class)
+    public ResponseEntity<ErrorResponse> handleBulkUpdateRange(BulkUpdateRangeException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(exception.getMessage()));
     }
 }

@@ -163,4 +163,30 @@ class ShiftServiceTest {
 
         assertThrows(ShiftAccessDeniedException.class, () -> shiftService.deleteShift(505L));
     }
+
+    @Test
+    void 기간_내_근무_유형을_일괄_변경한다() {
+        BulkUpdateShiftRequest request = new BulkUpdateShiftRequest("2026-08-10", "2026-08-14", "NIGHT");
+        ShiftSchedule shift1 = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 10), ShiftType.DAY, new ShiftTime(null, null));
+        ShiftSchedule shift2 = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 11), ShiftType.DAY, new ShiftTime(null, null));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 14)))
+                .thenReturn(List.of(shift1, shift2));
+
+        BulkUpdateShiftResponse response = shiftService.bulkUpdateShifts(request);
+
+        assertEquals(2, response.updatedCount());
+        assertEquals(ShiftType.NIGHT, shift1.getShiftType());
+        assertEquals(ShiftType.NIGHT, shift2.getShiftType());
+    }
+
+    @Test
+    void 변경_기간이_90일을_초과하면_예외를_던진다() {
+        BulkUpdateShiftRequest request = new BulkUpdateShiftRequest("2026-01-01", "2026-06-01", "NIGHT");
+
+        assertThrows(BulkUpdateRangeException.class, () -> shiftService.bulkUpdateShifts(request));
+    }
 }
