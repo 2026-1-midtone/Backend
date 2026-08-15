@@ -9,6 +9,8 @@ public interface ShiftScheduleRepository extends JpaRepository<ShiftSchedule, Lo
 
     boolean existsByUserIdAndWorkDate(long userId, LocalDate workDate);
 
+    Optional<ShiftSchedule> findByUserIdAndWorkDate(long userId, LocalDate workDate);
+
     List<ShiftSchedule> findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(long userId, LocalDate from, LocalDate to);
 
     Optional<ShiftSchedule> findByIdAndUserId(Long id, long userId);
