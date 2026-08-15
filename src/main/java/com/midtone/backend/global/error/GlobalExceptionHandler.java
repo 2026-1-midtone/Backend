@@ -7,6 +7,7 @@ import com.midtone.backend.shift.application.DuplicateShiftException;
 import com.midtone.backend.shift.application.InvalidDateRangeException;
 import com.midtone.backend.shift.application.ShiftAccessDeniedException;
 import com.midtone.backend.shift.application.ShiftNotFoundException;
+import com.midtone.backend.shift.application.ShiftPatternNotFoundException;
 import com.midtone.backend.user.application.profile.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -74,6 +75,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BulkUpdateRangeException.class)
     public ResponseEntity<ErrorResponse> handleBulkUpdateRange(BulkUpdateRangeException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(ShiftPatternNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleShiftPatternNotFound(ShiftPatternNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(exception.getMessage()));
     }
 }
