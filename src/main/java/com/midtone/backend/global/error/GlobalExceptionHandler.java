@@ -3,6 +3,7 @@ package com.midtone.backend.global.error;
 import com.midtone.backend.auth.application.InvalidRefreshTokenException;
 import com.midtone.backend.auth.google.InvalidGoogleTokenException;
 import com.midtone.backend.shift.application.DuplicateShiftException;
+import com.midtone.backend.shift.application.InvalidDateRangeException;
 import com.midtone.backend.user.application.profile.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateShiftException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateShift(DuplicateShiftException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidDateRangeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDateRange(InvalidDateRangeException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(exception.getMessage()));
     }
 }

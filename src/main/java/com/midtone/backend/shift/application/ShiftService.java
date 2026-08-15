@@ -7,6 +7,7 @@ import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +24,35 @@ public class ShiftService {
     }
 
     @Transactional
-    public CreateShiftResponse createShift(CreateShiftRequest request) {
+    public ShiftResponse createShift(CreateShiftRequest request) {
         long userId = currentUserIdProvider.getCurrentUserId();
         LocalDate workDate = LocalDate.parse(request.workDate());
         validateNoDuplicate(userId, workDate);
         ShiftSchedule shift = buildShift(userId, workDate, request);
         shiftScheduleRepository.save(shift);
-        return CreateShiftResponse.from(shift);
+        return ShiftResponse.from(shift);
+    }
+
+    @Transactional(readOnly = true)
+    public ShiftListResponse getShifts(GetShiftsRequest request) {
+        LocalDate from = LocalDate.parse(request.from());
+        LocalDate to = LocalDate.parse(request.to());
+        validateRange(from, to);
+        long userId = currentUserIdProvider.getCurrentUserId();
+        List<ShiftSchedule> shifts =
+                shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from, to);
+        return ShiftListResponse.from(shifts);
     }
 
     private void validateNoDuplicate(long userId, LocalDate workDate) {
         if (shiftScheduleRepository.existsByUserIdAndWorkDate(userId, workDate)) {
             throw new DuplicateShiftException();
+        }
+    }
+
+    private void validateRange(LocalDate from, LocalDate to) {
+        if (to.isBefore(from)) {
+            throw new InvalidDateRangeException();
         }
     }
 
