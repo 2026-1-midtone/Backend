@@ -2,6 +2,7 @@ package com.midtone.backend.global.error;
 
 import com.midtone.backend.auth.application.InvalidRefreshTokenException;
 import com.midtone.backend.auth.google.InvalidGoogleTokenException;
+import com.midtone.backend.shift.application.DuplicateShiftException;
 import com.midtone.backend.user.application.profile.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateShiftException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateShift(DuplicateShiftException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(exception.getMessage()));
     }
 }

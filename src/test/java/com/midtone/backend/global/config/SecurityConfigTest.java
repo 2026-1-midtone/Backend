@@ -4,6 +4,7 @@ import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
+import com.midtone.backend.shift.application.ShiftService;
 import com.midtone.backend.user.application.notification.NotificationSettingService;
 import com.midtone.backend.user.application.profile.UserService;
 import com.midtone.backend.user.application.settings.UserSettingsService;
@@ -26,6 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(SecurityConfig.class)
 @ActiveProfiles("test")
 class SecurityConfigTest {
+
+    private static final String UNMAPPED_PROTECTED_PATH = "/api/v1/__does-not-exist__";
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,9 +54,12 @@ class SecurityConfigTest {
     @MockitoBean
     private NotificationSettingService notificationSettingService;
 
+    @MockitoBean
+    private ShiftService shiftService;
+
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {
-        mockMvc.perform(get("/api/v1/shifts"))
+        mockMvc.perform(get(UNMAPPED_PROTECTED_PATH))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
     }
@@ -64,7 +70,7 @@ class SecurityConfigTest {
         when(jwtProvider.isAccessToken("valid-token")).thenReturn(true);
         when(jwtProvider.getUserId("valid-token")).thenReturn(1L);
 
-        mockMvc.perform(get("/api/v1/shifts").header("Authorization", "Bearer valid-token"))
+        mockMvc.perform(get(UNMAPPED_PROTECTED_PATH).header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isNotFound());
     }
 }
