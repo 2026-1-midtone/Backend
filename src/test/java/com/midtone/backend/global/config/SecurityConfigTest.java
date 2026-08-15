@@ -7,6 +7,7 @@ import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
 import com.midtone.backend.shift.application.pattern.ShiftPatternService;
 import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.transition.application.TransitionService;
 import com.midtone.backend.user.application.notification.NotificationSettingService;
 import com.midtone.backend.user.application.profile.UserService;
 import com.midtone.backend.user.application.settings.UserSettingsService;
@@ -64,6 +65,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private CoachingService coachingService;
+
+    @MockitoBean
+    private TransitionService transitionService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {
