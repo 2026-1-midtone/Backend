@@ -2,6 +2,8 @@ package com.midtone.backend.coaching.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -133,6 +136,27 @@ class CoachingServiceTest {
 
         verify(coachingCardRepository).deleteByDailyCoachingId(existing.getId());
         verify(dailyCoachingRepository).delete(existing);
+    }
+
+    @Test
+    void 기존_코칭_삭제를_새_코칭_저장보다_먼저_반영한다() {
+        RegenerateCoachingRequest request = new RegenerateCoachingRequest("2026-08-10", "2026-08-10");
+        ShiftSchedule shift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 10), ShiftType.NIGHT, new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
+        GeneratedCoaching generated = new GeneratedCoaching(shift, null, false, CaffeineSensitivity.MEDIUM, List.of());
+        DailyCoaching existing = new DailyCoaching(1L, new DailyCoaching.DailyCoachingContent(
+                LocalDate.of(2026, 8, 10), ShiftType.NIGHT, null, CaffeineSensitivity.MEDIUM, false));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(dailyCoachingGenerator.generate(1L, LocalDate.of(2026, 8, 10))).thenReturn(Optional.of(generated));
+        when(dailyCoachingRepository.findByUserIdAndCoachingDate(1L, LocalDate.of(2026, 8, 10)))
+                .thenReturn(Optional.of(existing));
+
+        coachingService.regenerateCoaching(request);
+
+        InOrder inOrder = inOrder(dailyCoachingRepository);
+        inOrder.verify(dailyCoachingRepository).delete(existing);
+        inOrder.verify(dailyCoachingRepository).flush();
+        inOrder.verify(dailyCoachingRepository).save(any(DailyCoaching.class));
     }
 
     @Test
