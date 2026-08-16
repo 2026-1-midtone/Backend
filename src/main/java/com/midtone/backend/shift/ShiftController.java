@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/shifts")
+@RequestMapping("/api/v1")
 public class ShiftController {
 
     private final ShiftService shiftService;
@@ -45,45 +45,45 @@ public class ShiftController {
         this.shiftCompletenessCalculator = shiftCompletenessCalculator;
     }
 
-    @PostMapping
+    @PostMapping("/shifts")
     public ResponseEntity<ShiftResponse> createShift(@Valid @RequestBody CreateShiftRequest request) {
         ShiftResponse response = shiftService.createShift(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping
+    @GetMapping("/shifts")
     public ResponseEntity<ShiftListResponse> getShifts(@Valid @ModelAttribute GetShiftsRequest request) {
         ShiftListResponse response = shiftService.getShifts(request);
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{shiftId}")
+    @PatchMapping("/shifts/{shiftId}")
     public ResponseEntity<UpdateShiftResponse> updateShift(
             @PathVariable Long shiftId, @Valid @RequestBody UpdateShiftRequest request) {
         UpdateShiftResponse response = shiftService.updateShift(shiftId, request);
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{shiftId}")
+    @DeleteMapping("/shifts/{shiftId}")
     public ResponseEntity<Void> deleteShift(@PathVariable Long shiftId) {
         shiftService.deleteShift(shiftId);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping(":bulk")
+    @PatchMapping("/shifts:bulk")
     public ResponseEntity<BulkUpdateShiftResponse> bulkUpdateShifts(@Valid @RequestBody BulkUpdateShiftRequest request) {
         BulkUpdateShiftResponse response = shiftService.bulkUpdateShifts(request);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/pattern")
+    @PostMapping("/shifts/pattern")
     public ResponseEntity<ApplyShiftPatternResponse> applyShiftPattern(
             @Valid @RequestBody ApplyShiftPatternRequest request) {
         ApplyShiftPatternResponse response = shiftPatternApplier.apply(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/completeness")
+    @GetMapping("/shifts/completeness")
     public ResponseEntity<CompletenessResponse> getCompleteness(
             @RequestParam(required = false, defaultValue = "4") int weeks) {
         CompletenessResponse response = shiftCompletenessCalculator.calculate(weeks);

@@ -1,10 +1,12 @@
 package com.midtone.backend.user.application.notification;
 
 import com.midtone.backend.global.validation.ValidationPatterns;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record NotificationSettingRequestItem(
+        @NotBlank(message = "알림 유형은 필수 입력값입니다.")
         @Pattern(regexp = "NAP|CAFFEINE_CUTOFF|LIGHT_EXPOSURE", message = "지원하지 않는 알림 유형입니다.")
         String type,
         @NotNull(message = "enabled는 필수 입력값입니다.") Boolean enabled,
