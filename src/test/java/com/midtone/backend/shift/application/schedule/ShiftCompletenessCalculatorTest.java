@@ -1,9 +1,11 @@
 package com.midtone.backend.shift.application.schedule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.midtone.backend.global.user.CurrentUserIdProvider;
+import com.midtone.backend.shift.application.ShiftException;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftTime;
@@ -42,6 +44,20 @@ class ShiftCompletenessCalculatorTest {
         assertEquals(1, response.confirmedDays());
         assertEquals(27, response.remainingDays());
         assertEquals(27, response.missingDates().size());
+    }
+
+    @Test
+    void 조회_기간이_1주_미만이면_예외를_던진다() {
+        ShiftException exception =
+                assertThrows(ShiftException.class, () -> shiftCompletenessCalculator.calculate(0));
+        assertEquals(ShiftException.ErrorCode.INVALID_COMPLETENESS_WEEKS, exception.getErrorCode());
+    }
+
+    @Test
+    void 조회_기간이_52주를_초과하면_예외를_던진다() {
+        ShiftException exception =
+                assertThrows(ShiftException.class, () -> shiftCompletenessCalculator.calculate(53));
+        assertEquals(ShiftException.ErrorCode.INVALID_COMPLETENESS_WEEKS, exception.getErrorCode());
     }
 
     @Test

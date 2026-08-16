@@ -66,6 +66,15 @@ class UserControllerTest {
     }
 
     @Test
+    void rejectsProfileUpdateWithInvalidTimezone() throws Exception {
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .contentType("application/json")
+                        .content("{\"timezone\":\"Not/AZone\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("타임존은 Asia/Seoul과 같은 유효한 값이어야 합니다."));
+    }
+
+    @Test
     void withdrawsAndReturnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/v1/users/me"))
                 .andExpect(status().isNoContent());
