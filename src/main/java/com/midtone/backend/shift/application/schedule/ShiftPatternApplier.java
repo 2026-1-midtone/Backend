@@ -27,16 +27,19 @@ public class ShiftPatternApplier {
     private final CurrentUserIdProvider currentUserIdProvider;
     private final ShiftPatternService shiftPatternService;
     private final ShiftCompletenessCalculator shiftCompletenessCalculator;
+    private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
 
     public ShiftPatternApplier(
             ShiftScheduleRepository shiftScheduleRepository,
             CurrentUserIdProvider currentUserIdProvider,
             ShiftPatternService shiftPatternService,
-            ShiftCompletenessCalculator shiftCompletenessCalculator) {
+            ShiftCompletenessCalculator shiftCompletenessCalculator,
+            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.currentUserIdProvider = currentUserIdProvider;
         this.shiftPatternService = shiftPatternService;
         this.shiftCompletenessCalculator = shiftCompletenessCalculator;
+        this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
     }
 
     @Transactional
@@ -49,7 +52,9 @@ public class ShiftPatternApplier {
         ApplyResult result = applyPatternToRange(userId, startDate, endDate, patternTypes);
         Long patternId = saveAsPatternIfRequested(request);
         CompletenessResponse completeness = shiftCompletenessCalculator.calculate(startDate, endDate);
-        return ApplyShiftPatternResponse.of(result.createdCount(), result.updatedCount(), patternId, completeness);
+        List<String> affectedCoachingDates = shiftCoachingRegenerationTrigger.triggerForRange(startDate, endDate);
+        return ApplyShiftPatternResponse.of(
+                result.createdCount(), result.updatedCount(), patternId, completeness, affectedCoachingDates);
     }
 
     private void validatePatternName(Boolean saveAsPattern, String patternName) {
