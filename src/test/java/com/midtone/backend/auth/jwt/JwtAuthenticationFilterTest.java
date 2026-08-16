@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.auth.domain.LogoutRepository;
 import jakarta.servlet.FilterChain;
+import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +25,9 @@ class JwtAuthenticationFilterTest {
     private JwtProvider jwtProvider;
 
     @Mock
+    private LogoutRepository logoutRepository;
+
+    @Mock
     private FilterChain filterChain;
 
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -33,13 +39,14 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void 유효한_액세스_토큰이면_인증정보를_설정한다() throws Exception {
-        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider);
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider, logoutRepository);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer access-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(jwtProvider.isValid("access-token")).thenReturn(true);
         when(jwtProvider.isAccessToken("access-token")).thenReturn(true);
         when(jwtProvider.getUserId("access-token")).thenReturn(1L);
+        when(logoutRepository.findByUserId(1L)).thenReturn(Optional.empty());
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
@@ -49,7 +56,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void 토큰이_없으면_인증정보를_설정하지_않는다() throws Exception {
-        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider);
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider, logoutRepository);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -59,8 +66,45 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void 로그아웃_이전에_발급된_액세스_토큰이면_인증정보를_설정하지_않는다() throws Exception {
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider, logoutRepository);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer access-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Instant loggedOutAt = Instant.parse("2026-08-16T09:00:00Z");
+        when(jwtProvider.isValid("access-token")).thenReturn(true);
+        when(jwtProvider.isAccessToken("access-token")).thenReturn(true);
+        when(jwtProvider.getUserId("access-token")).thenReturn(1L);
+        when(logoutRepository.findByUserId(1L)).thenReturn(Optional.of(loggedOutAt));
+        when(jwtProvider.getIssuedAt("access-token")).thenReturn(loggedOutAt.minusSeconds(60));
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void 로그아웃_이후에_발급된_액세스_토큰이면_인증정보를_설정한다() throws Exception {
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider, logoutRepository);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer access-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Instant loggedOutAt = Instant.parse("2026-08-16T09:00:00Z");
+        when(jwtProvider.isValid("access-token")).thenReturn(true);
+        when(jwtProvider.isAccessToken("access-token")).thenReturn(true);
+        when(jwtProvider.getUserId("access-token")).thenReturn(1L);
+        when(logoutRepository.findByUserId(1L)).thenReturn(Optional.of(loggedOutAt));
+        when(jwtProvider.getIssuedAt("access-token")).thenReturn(loggedOutAt.plusSeconds(60));
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertEquals(1L, authentication.getPrincipal());
+    }
+
+    @Test
     void 유효하지_않은_토큰이면_인증정보를_설정하지_않는다() throws Exception {
-        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider);
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtProvider, logoutRepository);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer invalid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();

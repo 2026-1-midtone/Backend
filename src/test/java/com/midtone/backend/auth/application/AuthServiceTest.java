@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.midtone.backend.auth.AuthException;
+import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -18,6 +20,7 @@ import com.midtone.backend.global.error.UnauthenticatedException;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +40,8 @@ class AuthServiceTest {
     private JwtProvider jwtProvider;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private LogoutRepository logoutRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -133,6 +138,29 @@ class AuthServiceTest {
         when(jwtProvider.createAccessToken(anyLong())).thenReturn("access-token");
         when(jwtProvider.createRefreshToken(anyLong())).thenReturn("refresh-token");
         when(jwtProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(30));
+    }
+
+    @Test
+    void 로그아웃하면_액세스_토큰도_무효화한다() {
+        LogoutRequest request = new LogoutRequest("refresh-token");
+        stubValidRefreshToken(1L, "refresh-token");
+        when(jwtProvider.getAccessTokenExpiration()).thenReturn(Duration.ofMinutes(30));
+
+        authService.logout(request);
+
+        verify(logoutRepository).save(eq(1L), any(Instant.class), eq(Duration.ofMinutes(30)));
+    }
+
+    @Test
+    void 토큰을_재발급하면_로그아웃_기록을_지운다() {
+        ReissueRequest request = new ReissueRequest("refresh-token");
+        stubValidRefreshToken(1L, "refresh-token");
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("refresh-token"));
+        stubTokenIssuance();
+
+        authService.reissue(request);
+
+        verify(logoutRepository).deleteByUserId(1L);
     }
 
     private void stubValidRefreshToken(long userId, String refreshToken) {

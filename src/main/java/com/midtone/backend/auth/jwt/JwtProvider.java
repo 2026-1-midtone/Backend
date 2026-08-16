@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,8 +46,16 @@ public class JwtProvider {
         return refreshTokenExpiration;
     }
 
+    public Duration getAccessTokenExpiration() {
+        return accessTokenExpiration;
+    }
+
     public long getUserId(String token) {
         return Long.parseLong(parseClaims(token).getSubject());
+    }
+
+    public Instant getIssuedAt(String token) {
+        return parseClaims(token).getIssuedAt().toInstant();
     }
 
     public TokenType getTokenType(String token) {
