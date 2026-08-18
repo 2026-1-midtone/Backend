@@ -47,6 +47,8 @@ Google 로그인, 자체 JWT 재발급·로그아웃, 내 정보, 사용자 설�
 
 이미지 업로드, 비동기 OCR 작업 상태 조회, 초안 검수·보정·확정, 재시도를 구현한다. OCR 결과는 검수 후에만 실제 일정에 반영한다.
 
+**상태: 완료** (Document AI Form Parser + 서비스 계정 impersonation, `docs/superpowers/specs/2026-08-18-ocr-schedule-input-design.md` 참조)
+
 ### P6 — AI 채팅 및 영양 콘텐츠
 
 채팅은 의료·응급 안전 분기를 우선 구현한 뒤 일정 기반 답변과 피드백·이력을 추가한다. 영양 콘텐츠, 즐겨찾기, 페이징은 독립 도메인으로 구현한다.
