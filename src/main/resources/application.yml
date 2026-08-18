@@ -33,3 +33,12 @@ app:
     location: ${DOCUMENTAI_LOCATION:us}
     processor-id: ${DOCUMENTAI_PROCESSOR_ID:cbb47f2525db9dc0}
     quota-project: ${DOCUMENTAI_QUOTA_PROJECT:shiftmate-504210}
+  openai:
+    endpoint: ${OPENAI_ENDPOINT:https://api.openai.com}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-5.4-mini}
+    ocr-enabled: ${OPENAI_OCR_ENABLED:false}
+  gemini:
+    endpoint: ${GEMINI_ENDPOINT:https://generativelanguage.googleapis.com}
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}

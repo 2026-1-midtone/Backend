@@ -25,16 +25,19 @@ public class OcrProcessingWorker {
     private final OcrDraftShiftRepository ocrDraftShiftRepository;
     private final DocumentAiClient documentAiClient;
     private final OcrDraftParser ocrDraftParser;
+    private final OcrFallbackExtractor ocrFallbackExtractor;
 
     public OcrProcessingWorker(
             OcrJobRepository ocrJobRepository,
             OcrDraftShiftRepository ocrDraftShiftRepository,
             DocumentAiClient documentAiClient,
-            OcrDraftParser ocrDraftParser) {
+            OcrDraftParser ocrDraftParser,
+            OcrFallbackExtractor ocrFallbackExtractor) {
         this.ocrJobRepository = ocrJobRepository;
         this.ocrDraftShiftRepository = ocrDraftShiftRepository;
         this.documentAiClient = documentAiClient;
         this.ocrDraftParser = ocrDraftParser;
+        this.ocrFallbackExtractor = ocrFallbackExtractor;
     }
 
     @Async("ocrExecutor")
@@ -55,6 +58,10 @@ public class OcrProcessingWorker {
             JsonNode document = documentAiClient.process(job.getImage(), job.getImageMime());
             List<OcrDraftParser.ParsedDraft> parsed =
                     ocrDraftParser.parse(document, YearMonth.parse(job.getTargetMonth()));
+            if (parsed.isEmpty()) {
+                parsed = ocrFallbackExtractor.extract(
+                        job.getImage(), job.getImageMime(), YearMonth.parse(job.getTargetMonth()));
+            }
             if (parsed.isEmpty()) {
                 job.markFailed(UNRECOGNIZED_MESSAGE);
             } else {
