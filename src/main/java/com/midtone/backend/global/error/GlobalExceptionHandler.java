@@ -1,11 +1,13 @@
 package com.midtone.backend.global.error;
 
 import com.midtone.backend.auth.AuthException;
+import com.midtone.backend.caffeine.application.CaffeineIntakeException;
 import com.midtone.backend.coaching.application.CoachingException;
 import com.midtone.backend.nap.application.NapException;
 import com.midtone.backend.ocr.application.OcrException;
 import com.midtone.backend.routine.application.RoutineException;
 import com.midtone.backend.shift.application.ShiftException;
+import com.midtone.backend.sleep.application.SleepLogException;
 import com.midtone.backend.transition.application.TransitionException;
 import com.midtone.backend.user.application.UserException;
 import java.time.format.DateTimeParseException;
@@ -106,6 +108,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OcrException.class)
     public ResponseEntity<ErrorResponse> handleOcrException(OcrException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(SleepLogException.class)
+    public ResponseEntity<ErrorResponse> handleSleepLogException(SleepLogException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(CaffeineIntakeException.class)
+    public ResponseEntity<ErrorResponse> handleCaffeineIntakeException(CaffeineIntakeException exception) {
         return ResponseEntity.status(exception.getErrorCode().getStatus())
                 .body(new ErrorResponse(exception.getMessage()));
     }
