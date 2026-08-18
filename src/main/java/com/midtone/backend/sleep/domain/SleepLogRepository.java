@@ -9,6 +9,9 @@ public interface SleepLogRepository extends JpaRepository<SleepLog, Long> {
     List<SleepLog> findByUserIdAndWokeAtBetweenOrderByWokeAtAsc(
             long userId, LocalDateTime from, LocalDateTime to);
 
+    List<SleepLog> findByUserIdAndWokeAtGreaterThanEqualAndWokeAtLessThanOrderByWokeAtAsc(
+            long userId, LocalDateTime fromInclusive, LocalDateTime toExclusive);
+
     long countByUserIdAndSleptAtLessThanAndWokeAtGreaterThan(
             long userId, LocalDateTime wokeAt, LocalDateTime sleptAt);
 

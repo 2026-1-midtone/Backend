@@ -8,4 +8,7 @@ public interface CaffeineIntakeRepository extends JpaRepository<CaffeineIntake, 
 
     List<CaffeineIntake> findByUserIdAndConsumedAtBetweenOrderByConsumedAtAsc(
             long userId, LocalDateTime from, LocalDateTime to);
+
+    List<CaffeineIntake> findByUserIdAndConsumedAtGreaterThanEqualAndConsumedAtLessThanOrderByConsumedAtAsc(
+            long userId, LocalDateTime fromInclusive, LocalDateTime toExclusive);
 }

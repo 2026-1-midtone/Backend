@@ -3,6 +3,7 @@ package com.midtone.backend.global.config;
 import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.jwt.JwtProvider;
+import com.midtone.backend.caffeine.application.CaffeineIntakeService;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
@@ -12,6 +13,7 @@ import com.midtone.backend.shift.application.pattern.ShiftPatternService;
 import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.ShiftPatternApplier;
 import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.sleep.application.SleepLogService;
 import com.midtone.backend.transition.application.TransitionService;
 import com.midtone.backend.user.application.notification.NotificationSettingService;
 import com.midtone.backend.user.application.profile.UserService;
@@ -89,6 +91,12 @@ class SecurityConfigTest {
 
     @MockitoBean
     private HomeService homeService;
+
+    @MockitoBean
+    private SleepLogService sleepLogService;
+
+    @MockitoBean
+    private CaffeineIntakeService caffeineIntakeService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {
