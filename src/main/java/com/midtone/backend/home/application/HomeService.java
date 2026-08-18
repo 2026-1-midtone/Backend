@@ -1,5 +1,6 @@
 package com.midtone.backend.home.application;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
@@ -33,7 +34,7 @@ public class HomeService {
 
     public HomeDashboardResponse getDashboard() {
         long userId = currentUserIdProvider.getCurrentUserId();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
         HomeScheduleSectionBuilder.ScheduleSection scheduleSection = homeScheduleSectionBuilder.build(userId, today);
         List<HomeDashboardResponse.TopCoachingCard> topCoachingCards = homeCoachingSectionBuilder.build(today);
         RoutineService.DailySummary summary = routineService.getSummary(today);

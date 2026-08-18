@@ -1,5 +1,6 @@
 package com.midtone.backend.coaching;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.coaching.application.CoachingCardDetailResponse;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.coaching.application.RegenerateCoachingRequest;
@@ -27,7 +28,7 @@ public class CoachingController {
 
     @GetMapping("/coachings")
     public TodayCoachingResponse getTodayCoaching(@RequestParam(required = false) LocalDate date) {
-        return coachingService.getTodayCoaching(date == null ? LocalDate.now() : date);
+        return coachingService.getTodayCoaching(date == null ? LocalDate.now(DateTimeDefaults.DEFAULT_ZONE) : date);
     }
 
     @GetMapping("/coachings/cards/{cardId}")
