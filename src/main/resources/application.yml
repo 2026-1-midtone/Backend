@@ -3,6 +3,10 @@ spring:
     name: backend
   profiles:
     default: local
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
   jpa:
     open-in-view: false
     hibernate:
@@ -23,3 +27,9 @@ app:
     refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:P30D}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
+  documentai:
+    endpoint: ${DOCUMENTAI_ENDPOINT:https://us-documentai.googleapis.com}
+    project-number: ${DOCUMENTAI_PROJECT_NUMBER:437332095325}
+    location: ${DOCUMENTAI_LOCATION:us}
+    processor-id: ${DOCUMENTAI_PROCESSOR_ID:cbb47f2525db9dc0}
+    quota-project: ${DOCUMENTAI_QUOTA_PROJECT:shiftmate-504210}

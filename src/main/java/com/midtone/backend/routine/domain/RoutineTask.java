@@ -56,7 +56,31 @@ public class RoutineTask {
     protected RoutineTask() {
     }
 
+    public RoutineTask(
+            Long userId,
+            LocalDate taskDate,
+            String sourceType,
+            Long sourceId,
+            String category,
+            String title,
+            String tip,
+            LocalDateTime windowStart,
+            LocalDateTime windowEnd) {
+        this.userId = userId;
+        this.taskDate = taskDate;
+        this.sourceType = sourceType;
+        this.sourceId = sourceId;
+        this.category = category;
+        this.title = title;
+        this.tip = tip;
+        this.windowStart = windowStart;
+        this.windowEnd = windowEnd;
+        this.status = TaskStatus.PENDING;
+    }
+
     public Long getId() { return id; }
+    public LocalDateTime getWindowStart() { return windowStart; }
+    public LocalDateTime getWindowEnd() { return windowEnd; }
     public Long getSourceId() { return sourceId; }
     public String getSourceType() { return sourceType; }
     public String getCategory() { return category; }

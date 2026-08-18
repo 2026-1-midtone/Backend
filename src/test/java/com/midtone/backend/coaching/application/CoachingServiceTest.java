@@ -41,6 +41,9 @@ class CoachingServiceTest {
     @Mock
     private CoachingCardRepository coachingCardRepository;
 
+    @Mock
+    private com.midtone.backend.routine.application.RoutineTaskGenerator routineTaskGenerator;
+
     @InjectMocks
     private CoachingService coachingService;
 
@@ -77,6 +80,11 @@ class CoachingServiceTest {
         TodayCoachingResponse response = coachingService.getTodayCoaching(date);
 
         assertEquals("NIGHT", response.todayShiftType());
+        verify(routineTaskGenerator).regenerate(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(date),
+                org.mockito.ArgumentMatchers.eq(ShiftType.NIGHT),
+                org.mockito.ArgumentMatchers.anyList());
     }
 
     @Test
