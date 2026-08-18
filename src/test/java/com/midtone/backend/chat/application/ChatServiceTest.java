@@ -77,4 +77,61 @@ class ChatServiceTest {
 
         assertEquals(ChatException.ErrorCode.ASSISTANT_ONLY, exception.getErrorCode());
     }
+
+    @Test
+    void 제품_추천_요청은_추천_전용_근거로_AI를_호출한다() {
+        LocalDate today = LocalDate.parse("2026-08-19");
+        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, null, null,
+                java.util.List.of(), new ChatContextSnapshot.RoutineProgress(0, 0),
+                new com.midtone.backend.nutrition.application.NutrientNeedResponse(java.util.List.of(
+                        new com.midtone.backend.nutrition.application.NutrientNeedResponse.Item("MAGNESIUM", "USER", today))),
+                new com.midtone.backend.nutrition.application.NutritionRecommendationResponse(java.util.List.of(
+                        new com.midtone.backend.nutrition.application.NutritionRecommendationResponse.Recommendation(
+                                1L, "DEEP_SLEEP_VISION", "바이브젠 딥 슬립 앤 비전", "VIVEGEN DEEP SLEEP & VISION",
+                                java.util.List.of("MAGNESIUM"), java.util.List.of(), "건강기능식품은 의약품이 아닙니다."))));
+        given(snapshotBuilder.build(1L, today)).willReturn(snapshot);
+        given(referenceCatalog.productRecommendation()).willReturn(
+                new ChatReference(ChatDomain.NUTRITION, "추천 전용 근거"));
+        given(answerGenerator.generate(any())).willReturn(
+                new GeneratedChatAnswer("딥 슬립 앤 비전이 마그네슘 목표와 매칭됩니다.", SafetyFlag.NONE, ChatDomain.NUTRITION));
+
+        ChatSendResponse response = service.recommendProducts(today);
+
+        assertEquals("NONE", response.safetyFlag());
+        assertEquals("NUTRITION", response.citedDomain());
+        verify(answerGenerator).generate(org.mockito.ArgumentMatchers.argThat(prompt ->
+                prompt.contextSnapshot() == snapshot
+                        && prompt.referenceExcerpt().equals("추천 전용 근거")
+                        && prompt.domain() == ChatDomain.NUTRITION));
+        verify(repository, org.mockito.Mockito.times(2)).save(any(ChatMessage.class));
+    }
+
+    @Test
+    void 영양소_목표가_없으면_AI_호출_없이_등록을_안내한다() {
+        LocalDate today = LocalDate.parse("2026-08-19");
+        given(snapshotBuilder.build(1L, today)).willReturn(ChatContextSnapshot.empty(today));
+
+        ChatSendResponse response = service.recommendProducts(today);
+
+        assertEquals("NONE", response.safetyFlag());
+        org.junit.jupiter.api.Assertions.assertTrue(response.answer().contains("영양소 목표"));
+        verify(answerGenerator, never()).generate(any());
+        verify(repository, org.mockito.Mockito.times(2)).save(any(ChatMessage.class));
+    }
+
+    @Test
+    void 목표는_있지만_매칭_제품이_없으면_AI_호출_없이_안내한다() {
+        LocalDate today = LocalDate.parse("2026-08-19");
+        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, null, null,
+                java.util.List.of(), new ChatContextSnapshot.RoutineProgress(0, 0),
+                new com.midtone.backend.nutrition.application.NutrientNeedResponse(java.util.List.of(
+                        new com.midtone.backend.nutrition.application.NutrientNeedResponse.Item("MAGNESIUM", "USER", today))),
+                new com.midtone.backend.nutrition.application.NutritionRecommendationResponse(java.util.List.of()));
+        given(snapshotBuilder.build(1L, today)).willReturn(snapshot);
+
+        ChatSendResponse response = service.recommendProducts(today);
+
+        org.junit.jupiter.api.Assertions.assertTrue(response.answer().contains("매칭"));
+        verify(answerGenerator, never()).generate(any());
+    }
 }

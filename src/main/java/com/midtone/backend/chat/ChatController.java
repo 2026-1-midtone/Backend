@@ -20,23 +20,29 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/chat/messages")
+@RequestMapping("/api/v1/chat")
 public class ChatController {
     private final ChatService chatService; private final Clock clock;
     public ChatController(ChatService chatService, Clock clock) { this.chatService = chatService; this.clock = clock; }
 
-    @PostMapping
+    @PostMapping("/messages")
     public ResponseEntity<ChatSendResponse> send(@Valid @RequestBody SendChatMessageRequest request) {
         return ResponseEntity.ok(chatService.send(request, LocalDate.now(clock.withZone(DateTimeDefaults.DEFAULT_ZONE))));
     }
 
-    @GetMapping
+    @PostMapping("/messages:recommend-products")
+    public ResponseEntity<ChatSendResponse> recommendProducts() {
+        return ResponseEntity.ok(
+                chatService.recommendProducts(LocalDate.now(clock.withZone(DateTimeDefaults.DEFAULT_ZONE))));
+    }
+
+    @GetMapping("/messages")
     public ResponseEntity<ChatHistoryResponse> history(
             @RequestParam(required = false) String cursor, @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(chatService.history(cursor, size));
     }
 
-    @PostMapping("/{messageId}/feedback")
+    @PostMapping("/messages/{messageId}/feedback")
     public ResponseEntity<ChatFeedbackResponse> feedback(@PathVariable long messageId,
             @Valid @RequestBody ChatFeedbackRequest request) {
         return ResponseEntity.ok(chatService.feedback(messageId, request));

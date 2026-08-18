@@ -123,6 +123,15 @@ Base URL은 `/api/v1`이며 기존 JWT 사용자 식별과 공통 오류 형식�
 
 OpenAI 모델은 환경변수로 교체 가능하게 하고 기본값을 mini급 모델로 둔다. API 키가 없으면 애플리케이션은 기동하되 채팅 요청만 502를 반환한다.
 
+### 제품 추천 전용 엔드포인트
+
+`POST /api/v1/chat/messages:recommend-products` (본문 없음). 프론트의 "제품 추천받기" 버튼이 호출한다.
+
+1. 고정 질문("내 영양소 목표에 맞는 제품을 추천해줘")을 사용자 메시지로 저장한다(대화 이력에 남는다). 고정 문구이므로 안전 분류는 생략한다.
+2. 스냅샷을 만든 뒤 결정적으로 분기한다. 영양소 목표가 없으면 목표 등록 안내를, 목표는 있지만 매칭 제품이 없으면 매칭 없음 안내를 LLM 호출 없이 저장·반환한다.
+3. 후보가 있으면 추천 전용 근거(`ChatReferenceCatalog.productRecommendation()`)로 OpenAI를 호출한다. 근거는 후보 순서 유지, 매칭 영양소·기능정보 문구 그대로 사용, 미포함 제품·복용법 언급 금지, 건강기능식품 고지를 강제한다.
+4. 응답 스키마는 일반 채팅과 동일한 `ChatSendResponse`이며 `context.nutritionRecommendations`에 후보가 담겨 프론트가 제품 카드를 함께 렌더링할 수 있다.
+
 ## 영양 API
 
 기존 `nutrition_contents`에 API 명세가 요구하는 `content_type`, `timing_tag`, `thumbnail_url`, `source_url`, `disclaimer`를 보강한다.
