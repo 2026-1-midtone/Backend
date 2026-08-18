@@ -6,6 +6,7 @@ import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
+import com.midtone.backend.ocr.application.OcrJobService;
 import com.midtone.backend.routine.application.RoutineService;
 import com.midtone.backend.shift.application.pattern.ShiftPatternService;
 import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
@@ -46,6 +47,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private RoutineService routineService;
+
+    @MockitoBean
+    private OcrJobService ocrJobService;
 
     @MockitoBean
     private AuthService authService;

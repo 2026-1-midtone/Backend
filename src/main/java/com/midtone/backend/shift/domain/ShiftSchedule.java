@@ -68,6 +68,14 @@ public class ShiftSchedule {
         this.confirmed = true;
     }
 
+    public static ShiftSchedule fromOcr(
+            Long userId, LocalDate workDate, ShiftType shiftType, ShiftTime shiftTime, BigDecimal confidence) {
+        ShiftSchedule shift = new ShiftSchedule(userId, workDate, shiftType, shiftTime);
+        shift.source = ShiftSource.OCR;
+        shift.confidence = confidence;
+        return shift;
+    }
+
     public void update(ShiftType shiftType, LocalTime startTime, LocalTime endTime) {
         if (shiftType != null) {
             this.shiftType = shiftType;

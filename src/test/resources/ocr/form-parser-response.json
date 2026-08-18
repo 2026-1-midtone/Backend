@@ -1,0 +1,51 @@
+{
+  "text": "날짜 근무 1 D 2 N 3 OFF 2026-08-04 이브닝 ? X",
+  "pages": [
+    {
+      "tables": [
+        {
+          "headerRows": [
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "0", "endIndex": "2"}]}, "confidence": 0.99}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "3", "endIndex": "5"}]}, "confidence": 0.99}}
+              ]
+            }
+          ],
+          "bodyRows": [
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "6", "endIndex": "7"}]}, "confidence": 0.98}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "8", "endIndex": "9"}]}, "confidence": 0.97}}
+              ]
+            },
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "10", "endIndex": "11"}]}, "confidence": 0.96}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "12", "endIndex": "13"}]}, "confidence": 0.95}}
+              ]
+            },
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "14", "endIndex": "15"}]}, "confidence": 0.94}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "16", "endIndex": "19"}]}, "confidence": 0.93}}
+              ]
+            },
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "20", "endIndex": "30"}]}, "confidence": 0.92}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "31", "endIndex": "34"}]}, "confidence": 0.91}}
+              ]
+            },
+            {
+              "cells": [
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "35", "endIndex": "36"}]}, "confidence": 0.5}},
+                {"layout": {"textAnchor": {"textSegments": [{"startIndex": "37", "endIndex": "38"}]}, "confidence": 0.5}}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

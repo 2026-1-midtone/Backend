@@ -85,7 +85,7 @@ class ShiftServiceTest {
                 new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                        1L, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+                        1L, LocalDate.of(2026, 7, 18), LocalDate.of(2026, 8, 31)))
                 .thenReturn(List.of(shift));
 
         ShiftListResponse response = shiftService.getShifts(request);
@@ -95,11 +95,30 @@ class ShiftServiceTest {
     }
 
     @Test
+    void 근무_목록_조회시_전환일을_표시한다() {
+        GetShiftsRequest request = new GetShiftsRequest("2026-08-10", "2026-08-31");
+        ShiftSchedule priorNight = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 9), ShiftType.NIGHT, new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
+        ShiftSchedule day = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 10), ShiftType.DAY, new ShiftTime(LocalTime.of(7, 0), LocalTime.of(15, 0)));
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 31)))
+                .thenReturn(List.of(priorNight, day));
+
+        ShiftListResponse response = shiftService.getShifts(request);
+
+        assertEquals(1, response.shifts().size());
+        assertEquals("2026-08-10", response.shifts().get(0).workDate());
+        assertTrue(response.shifts().get(0).isTransitionDay());
+    }
+
+    @Test
     void 조회_결과가_없으면_빈_목록을_반환한다() {
         GetShiftsRequest request = new GetShiftsRequest("2026-09-01", "2026-09-30");
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                        1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+                        1L, LocalDate.of(2026, 8, 18), LocalDate.of(2026, 9, 30)))
                 .thenReturn(List.of());
 
         ShiftListResponse response = shiftService.getShifts(request);

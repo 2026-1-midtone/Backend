@@ -1,13 +1,15 @@
 package com.midtone.backend.shift.application.schedule;
 
 import com.midtone.backend.shift.domain.ShiftSchedule;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public record ShiftListResponse(List<Item> shifts) {
 
-    public static ShiftListResponse from(List<ShiftSchedule> shifts) {
+    public static ShiftListResponse from(List<ShiftSchedule> shifts, Set<LocalDate> transitionDays) {
         List<Item> items = shifts.stream()
-                .map(Item::from)
+                .map(shift -> Item.from(shift, transitionDays.contains(shift.getWorkDate())))
                 .toList();
         return new ShiftListResponse(items);
     }
@@ -24,9 +26,7 @@ public record ShiftListResponse(List<Item> shifts) {
             boolean isTransitionDay
     ) {
 
-        private static final boolean TRANSITION_DAY_PLACEHOLDER = false;
-
-        public static Item from(ShiftSchedule shift) {
+        public static Item from(ShiftSchedule shift, boolean isTransitionDay) {
             return new Item(
                     shift.getId(),
                     shift.getWorkDate().toString(),
@@ -36,7 +36,7 @@ public record ShiftListResponse(List<Item> shifts) {
                     shift.getSource().name(),
                     shift.getConfidence() == null ? null : shift.getConfidence().doubleValue(),
                     shift.isConfirmed(),
-                    TRANSITION_DAY_PLACEHOLDER
+                    isTransitionDay
             );
         }
     }

@@ -5,6 +5,7 @@ import com.midtone.backend.coaching.domain.CoachingCardRepository;
 import com.midtone.backend.coaching.domain.DailyCoaching;
 import com.midtone.backend.coaching.domain.DailyCoachingRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
+import com.midtone.backend.routine.application.RoutineTaskGenerator;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -22,16 +23,19 @@ public class CoachingService {
     private final DailyCoachingGenerator dailyCoachingGenerator;
     private final DailyCoachingRepository dailyCoachingRepository;
     private final CoachingCardRepository coachingCardRepository;
+    private final RoutineTaskGenerator routineTaskGenerator;
 
     public CoachingService(
             CurrentUserIdProvider currentUserIdProvider,
             DailyCoachingGenerator dailyCoachingGenerator,
             DailyCoachingRepository dailyCoachingRepository,
-            CoachingCardRepository coachingCardRepository) {
+            CoachingCardRepository coachingCardRepository,
+            RoutineTaskGenerator routineTaskGenerator) {
         this.currentUserIdProvider = currentUserIdProvider;
         this.dailyCoachingGenerator = dailyCoachingGenerator;
         this.dailyCoachingRepository = dailyCoachingRepository;
         this.coachingCardRepository = coachingCardRepository;
+        this.routineTaskGenerator = routineTaskGenerator;
     }
 
     @Transactional
@@ -105,7 +109,8 @@ public class CoachingService {
     private DailyCoaching saveGeneratedCoaching(long userId, LocalDate date, GeneratedCoaching generated) {
         DailyCoaching dailyCoaching = new DailyCoaching(userId, toContent(date, generated));
         dailyCoachingRepository.save(dailyCoaching);
-        saveCards(dailyCoaching.getId(), generated.cards());
+        List<CoachingCard> savedCards = saveCards(dailyCoaching.getId(), generated.cards());
+        routineTaskGenerator.regenerate(userId, date, generated.todayShift().getShiftType(), savedCards);
         return dailyCoaching;
     }
 
@@ -118,10 +123,10 @@ public class CoachingService {
                 generated.transitionDay());
     }
 
-    private void saveCards(Long dailyCoachingId, List<CoachingCard.CoachingCardContent> contents) {
+    private List<CoachingCard> saveCards(Long dailyCoachingId, List<CoachingCard.CoachingCardContent> contents) {
         List<CoachingCard> cards = contents.stream()
                 .map(content -> new CoachingCard(dailyCoachingId, content))
                 .toList();
-        coachingCardRepository.saveAll(cards);
+        return coachingCardRepository.saveAll(cards);
     }
 }
