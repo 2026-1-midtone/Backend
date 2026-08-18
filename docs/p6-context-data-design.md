@@ -123,6 +123,8 @@ Base URL은 `/api/v1`이며 기존 JWT 사용자 식별과 공통 오류 형식�
 
 OpenAI 모델은 환경변수로 교체 가능하게 하고 기본값을 mini급 모델로 둔다. API 키가 없으면 애플리케이션은 기동하되 채팅 요청만 502를 반환한다.
 
+채팅 모델 공급자는 `ChatAnswerGenerator` 포트 뒤에서 교체한다. `GEMINI_API_KEY`가 설정되면 Gemini(`generateContent` + responseSchema 구조화 출력, 기본 `gemini-2.5-flash`)를, 없으면 OpenAI를 사용한다. 두 공급자는 동일한 시스템 프롬프트와 입력 조립(`ChatPromptTexts`)을 공유한다. OCR 폴백은 공급자 선택과 무관하게 `OPENAI_API_KEY`를 따로 사용한다.
+
 ### 제품 추천 전용 엔드포인트
 
 `POST /api/v1/chat/messages:recommend-products` (본문 없음). 프론트의 "제품 추천받기" 버튼이 호출한다.
