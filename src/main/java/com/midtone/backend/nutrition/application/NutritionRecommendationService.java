@@ -65,7 +65,8 @@ public class NutritionRecommendationService {
                 .stream().collect(Collectors.groupingBy(NutritionProductFunction::getProductId));
         return new NutritionProductCatalogResponse(products.stream().map(product ->
                 new NutritionProductCatalogResponse.Product(product.getId(), product.getCode(), product.getName(),
-                        product.getEnglishName(), functionInfos(functions.getOrDefault(product.getId(), List.of())),
+                        product.getEnglishName(), product.getImageUrl(),
+                        functionInfos(functions.getOrDefault(product.getId(), List.of())),
                         product.getDisclaimer())).toList());
     }
 
@@ -75,7 +76,7 @@ public class NutritionRecommendationService {
                 .filter(code -> code != null && needs.contains(code)).distinct().map(Enum::name).sorted().toList();
         List<NutritionRecommendationResponse.FunctionInfo> functionInfos = functionInfos(functions);
         return new NutritionRecommendationResponse.Recommendation(product.getId(), product.getCode(), product.getName(),
-                product.getEnglishName(), matched, functionInfos, product.getDisclaimer());
+                product.getEnglishName(), product.getImageUrl(), matched, functionInfos, product.getDisclaimer());
     }
 
     private List<NutritionRecommendationResponse.FunctionInfo> functionInfos(List<NutritionProductFunction> functions) {
