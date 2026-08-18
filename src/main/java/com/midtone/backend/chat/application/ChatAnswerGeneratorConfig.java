@@ -15,7 +15,7 @@ public class ChatAnswerGeneratorConfig {
             ObjectMapper objectMapper,
             @Value("${app.gemini.api-key:}") String geminiApiKey,
             @Value("${app.gemini.endpoint:https://generativelanguage.googleapis.com}") String geminiEndpoint,
-            @Value("${app.gemini.model:gemini-2.5-flash}") String geminiModel,
+            @Value("${app.gemini.model:gemini-3.5-flash-lite}") String geminiModel,
             @Value("${app.openai.api-key:}") String openAiApiKey,
             @Value("${app.openai.model:gpt-5.4-mini}") String openAiModel) {
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
