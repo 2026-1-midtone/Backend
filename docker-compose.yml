@@ -45,6 +45,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-shiftmate-504210}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini}
+      OPENAI_OCR_ENABLED: ${OPENAI_OCR_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
     volumes:
       - ${GCLOUD_CONFIG_DIR:-${APPDATA}/gcloud}:/root/.config/gcloud:ro
     ports:

@@ -1,5 +1,6 @@
 package com.midtone.backend.routine.application;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.routine.domain.RoutineTaskRepository;
 import com.midtone.backend.routine.domain.TaskStatus;
@@ -43,7 +44,7 @@ public class RoutineService {
         if (task.getUserId() != currentUserIdProvider.getCurrentUserId()) {
             throw new RoutineException(RoutineException.ErrorCode.ACCESS_DENIED);
         }
-        task.updateStatus(status, LocalDateTime.now());
+        task.updateStatus(status, LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE));
         return new UpdatedTask(task.getId(), status.name(), progressFor(task.getTaskDate()));
     }
 
@@ -64,7 +65,7 @@ public class RoutineService {
             throw new RoutineException(RoutineException.ErrorCode.INVALID_PERIOD);
         }
         int days = PERIOD_7D.equals(period) ? 7 : 30;
-        LocalDate to = LocalDate.now();
+        LocalDate to = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
         LocalDate from = to.minusDays(days - 1L);
         List<com.midtone.backend.routine.domain.RoutineTask> tasks = routineTaskRepository
                 .findAllByUserIdAndTaskDateBetweenOrderByTaskDateAscIdAsc(currentUserIdProvider.getCurrentUserId(), from, to);

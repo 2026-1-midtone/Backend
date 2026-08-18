@@ -1,11 +1,16 @@
 package com.midtone.backend.global.error;
 
 import com.midtone.backend.auth.AuthException;
+import com.midtone.backend.caffeine.application.CaffeineIntakeException;
+import com.midtone.backend.chat.application.ChatException;
 import com.midtone.backend.coaching.application.CoachingException;
 import com.midtone.backend.nap.application.NapException;
+import com.midtone.backend.nutrition.application.NutrientException;
+import com.midtone.backend.nutrition.application.NutritionException;
 import com.midtone.backend.ocr.application.OcrException;
 import com.midtone.backend.routine.application.RoutineException;
 import com.midtone.backend.shift.application.ShiftException;
+import com.midtone.backend.sleep.application.SleepLogException;
 import com.midtone.backend.transition.application.TransitionException;
 import com.midtone.backend.user.application.UserException;
 import java.time.format.DateTimeParseException;
@@ -108,6 +113,34 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOcrException(OcrException exception) {
         return ResponseEntity.status(exception.getErrorCode().getStatus())
                 .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(SleepLogException.class)
+    public ResponseEntity<ErrorResponse> handleSleepLogException(SleepLogException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(CaffeineIntakeException.class)
+    public ResponseEntity<ErrorResponse> handleCaffeineIntakeException(CaffeineIntakeException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(ChatException.class)
+    public ResponseEntity<ErrorResponse> handleChatException(ChatException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(NutritionException.class)
+    public ResponseEntity<ErrorResponse> handleNutritionException(NutritionException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus()).body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(NutrientException.class)
+    public ResponseEntity<ErrorResponse> handleNutrientException(NutrientException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus()).body(new ErrorResponse(exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

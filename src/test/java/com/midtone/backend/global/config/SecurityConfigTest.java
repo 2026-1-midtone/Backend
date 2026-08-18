@@ -3,15 +3,21 @@ package com.midtone.backend.global.config;
 import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.jwt.JwtProvider;
+import com.midtone.backend.caffeine.application.CaffeineIntakeService;
+import com.midtone.backend.chat.application.ChatService;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
+import com.midtone.backend.nutrition.application.NutrientNeedService;
+import com.midtone.backend.nutrition.application.NutritionContentService;
+import com.midtone.backend.nutrition.application.NutritionRecommendationService;
 import com.midtone.backend.ocr.application.OcrJobService;
 import com.midtone.backend.routine.application.RoutineService;
 import com.midtone.backend.shift.application.pattern.ShiftPatternService;
 import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.ShiftPatternApplier;
 import com.midtone.backend.shift.application.schedule.ShiftService;
+import com.midtone.backend.sleep.application.SleepLogService;
 import com.midtone.backend.transition.application.TransitionService;
 import com.midtone.backend.user.application.notification.NotificationSettingService;
 import com.midtone.backend.user.application.profile.UserService;
@@ -22,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Optional;
+import java.time.Clock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -89,6 +96,27 @@ class SecurityConfigTest {
 
     @MockitoBean
     private HomeService homeService;
+
+    @MockitoBean
+    private SleepLogService sleepLogService;
+
+    @MockitoBean
+    private CaffeineIntakeService caffeineIntakeService;
+
+    @MockitoBean
+    private ChatService chatService;
+
+    @MockitoBean
+    private Clock clock;
+
+    @MockitoBean
+    private NutritionContentService nutritionContentService;
+
+    @MockitoBean
+    private NutrientNeedService nutrientNeedService;
+
+    @MockitoBean
+    private NutritionRecommendationService nutritionRecommendationService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {

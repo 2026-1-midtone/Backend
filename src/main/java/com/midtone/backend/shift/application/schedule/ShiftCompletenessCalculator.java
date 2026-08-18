@@ -1,5 +1,6 @@
 package com.midtone.backend.shift.application.schedule;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.shift.application.ShiftException;
 import com.midtone.backend.shift.domain.ShiftSchedule;
@@ -27,7 +28,7 @@ public class ShiftCompletenessCalculator {
     @Transactional(readOnly = true)
     public CompletenessResponse calculate(int weeks) {
         validateWeeks(weeks);
-        LocalDate from = LocalDate.now();
+        LocalDate from = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
         LocalDate to = from.plusDays((long) weeks * ShiftScheduleWindow.DAYS_PER_WEEK - 1);
         return calculate(from, to);
     }
