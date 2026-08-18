@@ -2,6 +2,7 @@ package com.midtone.backend.global.error;
 
 import com.midtone.backend.auth.AuthException;
 import com.midtone.backend.caffeine.application.CaffeineIntakeException;
+import com.midtone.backend.chat.application.ChatException;
 import com.midtone.backend.coaching.application.CoachingException;
 import com.midtone.backend.nap.application.NapException;
 import com.midtone.backend.ocr.application.OcrException;
@@ -120,6 +121,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CaffeineIntakeException.class)
     public ResponseEntity<ErrorResponse> handleCaffeineIntakeException(CaffeineIntakeException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(ChatException.class)
+    public ResponseEntity<ErrorResponse> handleChatException(ChatException exception) {
         return ResponseEntity.status(exception.getErrorCode().getStatus())
                 .body(new ErrorResponse(exception.getMessage()));
     }

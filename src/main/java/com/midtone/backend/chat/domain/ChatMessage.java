@@ -1,5 +1,6 @@
 package com.midtone.backend.chat.domain;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,7 +48,7 @@ public class ChatMessage {
         this.role = role;
         this.content = content;
         this.responseType = responseType;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
     }
 
     public Long getId() { return id; }

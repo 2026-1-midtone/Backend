@@ -30,7 +30,7 @@ public class SafetyClassifier {
     }
 
     private String normalize(String message) {
-        return message == null ? "" : message.replaceAll("\s+", "").toLowerCase(Locale.ROOT);
+        return message == null ? "" : message.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
     }
 
     private boolean containsAny(String normalized, List<String> keywords) {

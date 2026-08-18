@@ -4,6 +4,7 @@ import com.midtone.backend.auth.application.AuthService;
 import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.caffeine.application.CaffeineIntakeService;
+import com.midtone.backend.chat.application.ChatService;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Optional;
+import java.time.Clock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -97,6 +99,12 @@ class SecurityConfigTest {
 
     @MockitoBean
     private CaffeineIntakeService caffeineIntakeService;
+
+    @MockitoBean
+    private ChatService chatService;
+
+    @MockitoBean
+    private Clock clock;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {
