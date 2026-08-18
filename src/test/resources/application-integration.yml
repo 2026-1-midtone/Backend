@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    issuer: shiftrhythm-integration
+    secret: c2hpZnRyaHl0aG0taW50ZWdyYXRpb24tdGVzdC1zZWNyZXQta2V5LTAxMjM0NTY3ODk=
+    access-token-expiration: PT30M
+    refresh-token-expiration: P30D
+  google:
+    client-id: integration-test-client-id

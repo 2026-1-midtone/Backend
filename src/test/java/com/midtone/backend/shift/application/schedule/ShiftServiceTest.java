@@ -205,4 +205,13 @@ class ShiftServiceTest {
                 assertThrows(ShiftException.class, () -> shiftService.bulkUpdateShifts(request));
         assertEquals(ShiftException.ErrorCode.BULK_UPDATE_RANGE_EXCEEDED, exception.getErrorCode());
     }
+
+    @Test
+    void 변경_종료일이_시작일보다_빠르면_예외를_던진다() {
+        BulkUpdateShiftRequest request = new BulkUpdateShiftRequest("2026-08-14", "2026-08-10", "NIGHT");
+
+        ShiftException exception =
+                assertThrows(ShiftException.class, () -> shiftService.bulkUpdateShifts(request));
+        assertEquals(ShiftException.ErrorCode.INVALID_DATE_RANGE, exception.getErrorCode());
+    }
 }

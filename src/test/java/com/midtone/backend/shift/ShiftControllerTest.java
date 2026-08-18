@@ -115,7 +115,8 @@ class ShiftControllerTest {
     @Test
     void appliesShiftPatternAndReturnsCreated() throws Exception {
         given(shiftPatternApplier.apply(any(ApplyShiftPatternRequest.class))).willReturn(
-                ApplyShiftPatternResponse.of(28, 0, null, new CompletenessResponse(28, 28, 0, List.of())));
+                ApplyShiftPatternResponse.of(
+                        28, 0, null, new CompletenessResponse(28, 28, 0, List.of()), List.of("2026-09-01")));
 
         mockMvc.perform(post("/api/v1/shifts/pattern")
                         .contentType("application/json")

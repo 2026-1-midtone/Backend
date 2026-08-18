@@ -1,5 +1,6 @@
 package com.midtone.backend.global.config;
 
+import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.jwt.JwtAuthenticationFilter;
 import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.global.error.ErrorResponse;
@@ -21,8 +22,11 @@ public class SecurityConfig {
 
     @Bean
     @Profile("!local")
-    SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper, JwtProvider jwtProvider)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            ObjectMapper objectMapper,
+            JwtProvider jwtProvider,
+            LogoutRepository logoutRepository) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -34,7 +38,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().permitAll())
-                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtProvider, logoutRepository),
+                        UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 

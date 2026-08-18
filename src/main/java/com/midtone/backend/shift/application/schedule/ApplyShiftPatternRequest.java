@@ -1,6 +1,8 @@
 package com.midtone.backend.shift.application.schedule;
 
 import com.midtone.backend.global.validation.ValidationPatterns;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -16,6 +18,7 @@ public record ApplyShiftPatternRequest(
 
         @NotNull(message = "생성 기간(주)은 필수 입력값입니다.")
         @Min(value = 4, message = "생성 기간은 최소 4주 이상이어야 합니다.")
+        @Max(value = ShiftScheduleWindow.MAX_PATTERN_WEEKS, message = "생성 기간은 최대 12주까지 지정할 수 있습니다.")
         Integer weeks,
 
         @NotEmpty(message = "패턴은 비어있을 수 없습니다.")

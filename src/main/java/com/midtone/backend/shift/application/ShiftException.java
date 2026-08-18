@@ -17,7 +17,7 @@ public class ShiftException extends RuntimeException {
 
     public enum ErrorCode {
         DUPLICATE_SHIFT("해당 날짜에 이미 근무 일정이 있습니다.", HttpStatus.CONFLICT),
-        INVALID_DATE_RANGE("조회 종료일은 시작일보다 빨라야 합니다.", HttpStatus.BAD_REQUEST),
+        INVALID_DATE_RANGE("종료일은 시작일보다 빠를 수 없습니다.", HttpStatus.BAD_REQUEST),
         SHIFT_NOT_FOUND("해당 근무 일정이 없습니다.", HttpStatus.NOT_FOUND),
         SHIFT_ACCESS_DENIED("접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
         BULK_UPDATE_RANGE_EXCEEDED("변경 기간은 최대 90일까지 지정할 수 있습니다.", HttpStatus.BAD_REQUEST),

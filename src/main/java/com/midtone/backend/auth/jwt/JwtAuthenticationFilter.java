@@ -1,5 +1,6 @@
 package com.midtone.backend.auth.jwt;
 
+import com.midtone.backend.auth.domain.LogoutRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,9 +19,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtProvider jwtProvider;
+    private final LogoutRepository logoutRepository;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider) {
+    public JwtAuthenticationFilter(JwtProvider jwtProvider, LogoutRepository logoutRepository) {
         this.jwtProvider = jwtProvider;
+        this.logoutRepository = logoutRepository;
     }
 
     @Override
@@ -41,7 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isValidAccessToken(String token) {
-        return jwtProvider.isValid(token) && jwtProvider.isAccessToken(token);
+        return jwtProvider.isValid(token) && jwtProvider.isAccessToken(token) && !isLoggedOut(token);
+    }
+
+    private boolean isLoggedOut(String token) {
+        return logoutRepository.findByUserId(jwtProvider.getUserId(token))
+                .filter(loggedOutAt -> !jwtProvider.getIssuedAt(token).isAfter(loggedOutAt))
+                .isPresent();
     }
 
     private void authenticate(String token) {

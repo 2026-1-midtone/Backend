@@ -1,6 +1,7 @@
 package com.midtone.backend.auth.application;
 
 import com.midtone.backend.auth.AuthException;
+import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.domain.RefreshTokenRepository;
 import com.midtone.backend.auth.google.GoogleTokenVerifier;
 import com.midtone.backend.auth.google.GoogleUserInfo;
@@ -9,6 +10,7 @@ import com.midtone.backend.global.error.UnauthenticatedException;
 import com.midtone.backend.user.application.profile.UserResponse;
 import com.midtone.backend.user.domain.User;
 import com.midtone.backend.user.domain.UserRepository;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,17 +22,20 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final LogoutRepository logoutRepository;
 
     public AuthService(
             GoogleTokenVerifier googleTokenVerifier,
             UserRepository userRepository,
             JwtProvider jwtProvider,
-            RefreshTokenRepository refreshTokenRepository
+            RefreshTokenRepository refreshTokenRepository,
+            LogoutRepository logoutRepository
     ) {
         this.googleTokenVerifier = googleTokenVerifier;
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.logoutRepository = logoutRepository;
     }
 
     @Transactional
@@ -57,6 +62,7 @@ public class AuthService {
     public void logout(LogoutRequest request) {
         long userId = extractAuthenticatedUserId(request.refreshToken());
         refreshTokenRepository.deleteByUserId(userId);
+        logoutRepository.save(userId, Instant.now(), jwtProvider.getAccessTokenExpiration());
     }
 
     private User createUser(GoogleUserInfo googleUserInfo, String timezone) {
@@ -107,6 +113,7 @@ public class AuthService {
         String accessToken = jwtProvider.createAccessToken(userId);
         String refreshToken = jwtProvider.createRefreshToken(userId);
         refreshTokenRepository.save(userId, refreshToken, jwtProvider.getRefreshTokenExpiration());
+        logoutRepository.deleteByUserId(userId);
 
         return new TokenResponse(accessToken, refreshToken);
     }

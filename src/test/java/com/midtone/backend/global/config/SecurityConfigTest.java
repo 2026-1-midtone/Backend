@@ -1,6 +1,7 @@
 package com.midtone.backend.global.config;
 
 import com.midtone.backend.auth.application.AuthService;
+import com.midtone.backend.auth.domain.LogoutRepository;
 import com.midtone.backend.auth.jwt.JwtProvider;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
@@ -19,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -50,6 +52,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private LogoutRepository logoutRepository;
 
     @MockitoBean
     private UserService userService;
@@ -93,6 +98,7 @@ class SecurityConfigTest {
         when(jwtProvider.isValid("valid-token")).thenReturn(true);
         when(jwtProvider.isAccessToken("valid-token")).thenReturn(true);
         when(jwtProvider.getUserId("valid-token")).thenReturn(1L);
+        when(logoutRepository.findByUserId(1L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get(UNMAPPED_PROTECTED_PATH).header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isNotFound());

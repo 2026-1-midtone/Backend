@@ -104,6 +104,7 @@ public class ShiftService {
     }
 
     private void validateBulkRange(LocalDate from, LocalDate to) {
+        validateRange(from, to);
         if (ChronoUnit.DAYS.between(from, to) > MAX_BULK_RANGE_DAYS) {
             throw new ShiftException(ShiftException.ErrorCode.BULK_UPDATE_RANGE_EXCEEDED);
         }

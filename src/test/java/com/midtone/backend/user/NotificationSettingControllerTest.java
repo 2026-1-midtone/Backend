@@ -63,4 +63,13 @@ class NotificationSettingControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("settings는 필수 입력값입니다."));
     }
+
+    @Test
+    void rejectsSaveWithoutNotificationType() throws Exception {
+        mockMvc.perform(put("/api/v1/users/me/notification-settings")
+                        .contentType("application/json")
+                        .content("{\"settings\":[{\"enabled\":false,\"customTime\":null}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("알림 유형은 필수 입력값입니다."));
+    }
 }

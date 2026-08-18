@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/coachings")
+@RequestMapping("/api/v1")
 public class CoachingController {
 
     private final CoachingService coachingService;
@@ -25,17 +25,17 @@ public class CoachingController {
         this.coachingService = coachingService;
     }
 
-    @GetMapping
+    @GetMapping("/coachings")
     public TodayCoachingResponse getTodayCoaching(@RequestParam(required = false) LocalDate date) {
         return coachingService.getTodayCoaching(date == null ? LocalDate.now() : date);
     }
 
-    @GetMapping("/cards/{cardId}")
+    @GetMapping("/coachings/cards/{cardId}")
     public CoachingCardDetailResponse getCardDetail(@PathVariable Long cardId) {
         return coachingService.getCardDetail(cardId);
     }
 
-    @PostMapping(":regenerate")
+    @PostMapping("/coachings:regenerate")
     public RegenerateCoachingResponse regenerateCoaching(@Valid @RequestBody RegenerateCoachingRequest request) {
         return coachingService.regenerateCoaching(request);
     }

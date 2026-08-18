@@ -92,6 +92,7 @@ public class CoachingService {
         dailyCoachingRepository.findByUserIdAndCoachingDate(userId, date).ifPresent(existing -> {
             coachingCardRepository.deleteByDailyCoachingId(existing.getId());
             dailyCoachingRepository.delete(existing);
+            dailyCoachingRepository.flush();
         });
     }
 

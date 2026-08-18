@@ -35,6 +35,8 @@ class ShiftPatternApplierTest {
     private ShiftPatternService shiftPatternService;
     @Mock
     private ShiftCompletenessCalculator shiftCompletenessCalculator;
+    @Mock
+    private ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
 
     @InjectMocks
     private ShiftPatternApplier shiftPatternApplier;
@@ -95,6 +97,26 @@ class ShiftPatternApplierTest {
 
         verify(shiftPatternService).saveShiftPattern(any(SaveShiftPatternRequest.class));
         assertEquals(10L, response.patternId());
+    }
+
+    @Test
+    void 패턴을_적용하면_해당_기간의_코칭을_재생성한다() {
+        ApplyShiftPatternRequest request = new ApplyShiftPatternRequest(
+                "2026-09-01", 4, List.of("DAY", "EVENING", "NIGHT", "OFF"), null, null);
+        when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
+        when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(List.of());
+        when(shiftCompletenessCalculator.calculate(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(new CompletenessResponse(28, 28, 0, List.of()));
+        when(shiftCoachingRegenerationTrigger.triggerForRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28)))
+                .thenReturn(List.of("2026-09-01", "2026-09-02"));
+
+        ApplyShiftPatternResponse response = shiftPatternApplier.apply(request);
+
+        verify(shiftCoachingRegenerationTrigger)
+                .triggerForRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 28));
+        assertEquals(List.of("2026-09-01", "2026-09-02"), response.affectedCoachingDates());
     }
 
     @Test
