@@ -3,6 +3,7 @@ package com.midtone.backend.global.error;
 import com.midtone.backend.auth.AuthException;
 import com.midtone.backend.coaching.application.CoachingException;
 import com.midtone.backend.nap.application.NapException;
+import com.midtone.backend.ocr.application.OcrException;
 import com.midtone.backend.routine.application.RoutineException;
 import com.midtone.backend.shift.application.ShiftException;
 import com.midtone.backend.transition.application.TransitionException;
@@ -99,6 +100,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RoutineException.class)
     public ResponseEntity<ErrorResponse> handleRoutineException(RoutineException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus())
+                .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(OcrException.class)
+    public ResponseEntity<ErrorResponse> handleOcrException(OcrException exception) {
         return ResponseEntity.status(exception.getErrorCode().getStatus())
                 .body(new ErrorResponse(exception.getMessage()));
     }
