@@ -16,7 +16,7 @@ public class GeminiChatAnswerGenerator implements ChatAnswerGenerator {
                     "safety_flag", Map.of("type", "STRING",
                             "enum", List.of("NONE", "MEDICAL_REFERRAL", "EMERGENCY")),
                     "cited_domain", Map.of("type", "STRING", "nullable", true,
-                            "enum", List.of("CAFFEINE", "LIGHT", "NAP", "TRANSITION", "NUTRITION"))),
+                            "enum", List.of("CAFFEINE", "LIGHT", "NAP", "TRANSITION", "SLEEP", "NUTRITION"))),
             "required", List.of("answer_text", "safety_flag"));
 
     private final RestClient restClient;
