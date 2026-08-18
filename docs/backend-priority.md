@@ -47,7 +47,7 @@ Google 로그인, 자체 JWT 재발급·로그아웃, 내 정보, 사용자 설�
 
 이미지 업로드, 비동기 OCR 작업 상태 조회, 초안 검수·보정·확정, 재시도를 구현한다. OCR 결과는 검수 후에만 실제 일정에 반영한다.
 
-**상태: 완료** (Document AI Form Parser + 서비스 계정 impersonation 적용)
+**상태: 완료** (Document AI Form Parser + 서비스 계정 impersonation, `docs/superpowers/specs/2026-08-18-ocr-schedule-input-design.md` 참조)
 
 ### P6 — AI 채팅 및 영양 콘텐츠
 
