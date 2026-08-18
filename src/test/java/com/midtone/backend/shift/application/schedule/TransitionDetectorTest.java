@@ -11,6 +11,7 @@ import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -75,6 +76,29 @@ class TransitionDetectorTest {
     void 오늘이_OFF면_전환일이_아니다() {
         Optional<TransitionDetector.TransitionInfo> result =
                 transitionDetector.detectTransition(1L, LocalDate.of(2026, 8, 9), ShiftType.OFF);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void 정렬된_일정_목록에서_전환일_집합을_계산한다() {
+        List<ShiftSchedule> shifts = List.of(
+                new ShiftSchedule(1L, LocalDate.of(2026, 8, 8), ShiftType.NIGHT, new ShiftTime(null, null)),
+                new ShiftSchedule(1L, LocalDate.of(2026, 8, 9), ShiftType.OFF, new ShiftTime(null, null)),
+                new ShiftSchedule(1L, LocalDate.of(2026, 8, 10), ShiftType.DAY, new ShiftTime(null, null)),
+                new ShiftSchedule(1L, LocalDate.of(2026, 8, 11), ShiftType.DAY, new ShiftTime(null, null)));
+
+        Set<LocalDate> result = TransitionDetector.transitionDaysOf(shifts);
+
+        assertEquals(Set.of(LocalDate.of(2026, 8, 10)), result);
+    }
+
+    @Test
+    void 이전_근무가_없으면_전환일_집합은_비어있다() {
+        List<ShiftSchedule> shifts = List.of(
+                new ShiftSchedule(1L, LocalDate.of(2026, 8, 8), ShiftType.NIGHT, new ShiftTime(null, null)));
+
+        Set<LocalDate> result = TransitionDetector.transitionDaysOf(shifts);
 
         assertTrue(result.isEmpty());
     }
