@@ -44,6 +44,9 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-shiftrhythm-api}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-shiftmate-504210}
+    volumes:
+      - ${GCLOUD_CONFIG_DIR:-${APPDATA}/gcloud}:/root/.config/gcloud:ro
     ports:
       - "${SERVER_PORT:-8080}:8080"
     depends_on:
