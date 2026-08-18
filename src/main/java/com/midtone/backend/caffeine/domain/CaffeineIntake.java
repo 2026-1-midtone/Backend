@@ -1,5 +1,6 @@
 package com.midtone.backend.caffeine.domain;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -52,7 +53,7 @@ public class CaffeineIntake {
         this.amountMg = amountMg;
         this.servings = servings;
         this.beverageType = beverageType;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
         this.updatedAt = this.createdAt;
     }
 
@@ -63,7 +64,7 @@ public class CaffeineIntake {
         this.amountMg = amountMg;
         this.servings = servings;
         this.beverageType = beverageType;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
     }
 
     public Long getId() { return id; }

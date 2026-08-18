@@ -1,5 +1,6 @@
 package com.midtone.backend.routine;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.routine.application.RoutineService;
 import java.time.LocalDate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +23,12 @@ public class RoutineController {
 
     @GetMapping
     public RoutineService.DailyRoutine getRoutines(@RequestParam(required = false) LocalDate date) {
-        return routineService.getRoutines(date == null ? LocalDate.now() : date);
+        return routineService.getRoutines(date == null ? LocalDate.now(DateTimeDefaults.DEFAULT_ZONE) : date);
     }
 
     @GetMapping("/summary")
     public RoutineService.DailySummary getSummary(@RequestParam(required = false) LocalDate date) {
-        return routineService.getSummary(date == null ? LocalDate.now() : date);
+        return routineService.getSummary(date == null ? LocalDate.now(DateTimeDefaults.DEFAULT_ZONE) : date);
     }
 
     @GetMapping("/report")

@@ -77,7 +77,7 @@ public class HomeScheduleSectionBuilder {
     }
 
     private long minutesUntil(LocalDateTime startAt) {
-        return Math.max(0, Duration.between(LocalDateTime.now(), startAt).toMinutes());
+        return Math.max(0, Duration.between(LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE), startAt).toMinutes());
     }
 
     private HomeDashboardResponse.ScheduleAlert buildScheduleAlert() {

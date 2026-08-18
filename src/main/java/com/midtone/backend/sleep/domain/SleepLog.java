@@ -1,5 +1,6 @@
 package com.midtone.backend.sleep.domain;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,7 +51,7 @@ public class SleepLog {
         this.wokeAt = wokeAt;
         this.recordedTimezone = recordedTimezone;
         this.source = source;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
         this.updatedAt = this.createdAt;
     }
 
@@ -60,7 +61,7 @@ public class SleepLog {
         this.wokeAt = wokeAt;
         this.recordedTimezone = recordedTimezone;
         this.source = source;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
     }
 
     public Long getId() { return id; }
