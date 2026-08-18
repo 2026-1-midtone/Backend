@@ -47,7 +47,8 @@ API는 `http://localhost:8080`에서 실행됩니다. MySQL과 Redis 데이터�
 | `DOCUMENTAI_LOCATION` | Document AI 프로세서 리전 (기본 `us`) |
 | `DOCUMENTAI_PROCESSOR_ID` | Document AI Form Parser 프로세서 ID (기본값: 팀 공용) |
 | `GCLOUD_CONFIG_DIR` | 컨테이너에 마운트할 호스트 gcloud 설정 디렉터리 |
-| `OPENAI_API_KEY` / `OPENAI_MODEL` | AI 채팅 및 선택적 OCR 폴백 설정 |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | AI 채팅(OpenAI 사용 시) 및 선택적 OCR 폴백 설정 |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | AI 채팅(Gemini 사용 시). 키가 설정되면 채팅은 OpenAI 대신 Gemini를 사용 (기본 모델 `gemini-2.5-flash`) |
 | `OPENAI_OCR_ENABLED` | Document AI가 일정을 찾지 못했을 때 원본 이미지를 OpenAI로 전송할지 여부 (기본 `false`) |
 
 `.env` 파일은 Git에서 제외됩니다. 비밀값을 저장소에 커밋하지 마세요.

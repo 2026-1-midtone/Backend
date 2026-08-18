@@ -48,6 +48,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini}
       OPENAI_OCR_ENABLED: ${OPENAI_OCR_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     volumes:
       - ${GCLOUD_CONFIG_DIR:-${APPDATA}/gcloud}:/root/.config/gcloud:ro
     ports:
