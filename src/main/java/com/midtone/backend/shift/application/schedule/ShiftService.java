@@ -4,12 +4,14 @@ import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.shift.application.ShiftException;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
+import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,9 +49,13 @@ public class ShiftService {
         LocalDate to = LocalDate.parse(request.to());
         validateRange(from, to);
         long userId = currentUserIdProvider.getCurrentUserId();
-        List<ShiftSchedule> shifts =
-                shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from, to);
-        return ShiftListResponse.from(shifts);
+        List<ShiftSchedule> shiftsWithScanWindow = shiftScheduleRepository
+                .findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from.minusDays(ShiftScheduleWindow.SCAN_DAYS), to);
+        Set<LocalDate> transitionDays = TransitionDetector.transitionDaysOf(shiftsWithScanWindow);
+        List<ShiftSchedule> shiftsInRange = shiftsWithScanWindow.stream()
+                .filter(shift -> !shift.getWorkDate().isBefore(from))
+                .toList();
+        return ShiftListResponse.from(shiftsInRange, transitionDays);
     }
 
     @Transactional
