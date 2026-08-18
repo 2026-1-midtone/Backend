@@ -11,6 +11,7 @@ public record ChatContextSnapshot(
         LocalDate date,
         String schedule,
         SleepPattern sleepPattern,
+        List<RecentSleepLog> recentSleepLogs,
         DailyCaffeineStatus caffeineStatus,
         String caffeineSensitivity,
         List<CoachingCardSnapshot> coachingCards,
@@ -19,10 +20,11 @@ public record ChatContextSnapshot(
         NutritionRecommendationResponse nutritionRecommendations) {
 
     public static ChatContextSnapshot empty(LocalDate date) {
-        return new ChatContextSnapshot(date, null, null, null, null, List.of(), new RoutineProgress(0, 0),
+        return new ChatContextSnapshot(date, null, null, List.of(), null, null, List.of(), new RoutineProgress(0, 0),
                 new NutrientNeedResponse(List.of()), new NutritionRecommendationResponse(List.of()));
     }
 
     public record CoachingCardSnapshot(String type, String windowStart, String windowEnd, String description) {}
+    public record RecentSleepLog(String sleptAt, String wokeAt, long durationMinutes) {}
     public record RoutineProgress(int completed, int total) {}
 }

@@ -24,6 +24,10 @@ public class ChatReferenceCatalog {
             return new ChatReference(ChatDomain.TRANSITION,
                     "근무 유형이 바뀌는 전환일에는 백엔드가 계산한 단계별 수면·빛·카페인 조정값만 설명한다.");
         }
+        if (contains(value, "수면", "잤", "취침", "기상", "잠들")) {
+            return new ChatReference(ChatDomain.SLEEP,
+                    "수면 시간과 패턴은 context_snapshot의 값만 근거로 설명한다. recentSleepLogs에는 최근 수면 기록(취침 sleptAt, 기상 wokeAt, 수면 durationMinutes분)이 최신순으로 있고, sleepPattern에는 습관적 취침·기상·중간수면 시각이 있다. 특정 날짜의 수면을 물으면 recentSleepLogs에서 해당 기록을 찾아 시간으로 환산해 설명하고, 기록이 없으면 없다고 말한 뒤 수면 기록 등록을 안내한다. 수면장애 진단이나 수면제 관련 판단은 하지 않는다.");
+        }
         return new ChatReference(ChatDomain.NUTRITION,
                 "개인의 영양 결핍은 증상만으로 판단하지 않는다. context_snapshot에 사용자가 등록한 영양소 목표와 백엔드가 결정적으로 매칭한 제품 후보가 있을 때만 그 후보를 설명한다. 제품명, 기능정보, 매칭 영양소는 주어진 값을 그대로 사용하고 새로운 효능, 우선순위, 복용량을 만들지 않는다. 건강기능식품은 질병의 예방 및 치료를 위한 의약품이 아니다.");
     }
