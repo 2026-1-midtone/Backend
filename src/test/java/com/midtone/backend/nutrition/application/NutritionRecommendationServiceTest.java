@@ -58,11 +58,13 @@ class NutritionRecommendationServiceTest {
         assertEquals(2, result.recommendations().size());
         assertEquals("REVIVE_ENERGY_SHOT", result.recommendations().get(0).productCode());
         assertEquals(List.of("MAGNESIUM", "VITAMIN_D"), result.recommendations().get(0).matchedNutrients());
+        assertEquals("/images/products/revive_energy_shot.png", result.recommendations().get(0).imageUrl());
         assertEquals("DEEP_SLEEP_VISION", result.recommendations().get(1).productCode());
     }
 
     private NutritionProduct product(long id, String code, String name) {
-        return new NutritionProduct(id, code, name, code, "건강기능식품은 의약품이 아닙니다.");
+        return new NutritionProduct(
+                id, code, name, code, "/images/products/" + code.toLowerCase() + ".png", "건강기능식품은 의약품이 아닙니다.");
     }
 
     private NutritionProductFunction function(long productId, String ingredient, NutrientCode nutrientCode) {
