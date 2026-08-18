@@ -41,6 +41,39 @@ class OcrDraftParserTest {
     }
 
     @Test
+    void 한글_데이와_나이트_표기도_근무유형으로_변환한다() throws Exception {
+        JsonNode koreanShiftDocument = new ObjectMapper().readTree("""
+                {
+                  "text": "1 데이 2 나이트",
+                  "pages": [{
+                    "tables": [{
+                      "bodyRows": [
+                        {"cells": [
+                          {"layout": {"textAnchor": {"textSegments": [{"startIndex": "0", "endIndex": "1"}]}}},
+                          {"layout": {"textAnchor": {"textSegments": [{"startIndex": "2", "endIndex": "4"}]}, "confidence": 0.98}}
+                        ]},
+                        {"cells": [
+                          {"layout": {"textAnchor": {"textSegments": [{"startIndex": "5", "endIndex": "6"}]}}},
+                          {"layout": {"textAnchor": {"textSegments": [{"startIndex": "7", "endIndex": "10"}]}, "confidence": 0.96}}
+                        ]}
+                      ]
+                    }]
+                  }]
+                }
+                """);
+
+        List<OcrDraftParser.ParsedDraft> drafts = parser.parse(koreanShiftDocument, YearMonth.of(2026, 8));
+
+        assertEquals(2, drafts.size());
+        assertEquals(LocalDate.of(2026, 8, 1), drafts.get(0).workDate());
+        assertEquals(ShiftType.DAY, drafts.get(0).shiftType());
+        assertEquals(new BigDecimal("0.980"), drafts.get(0).confidence());
+        assertEquals(LocalDate.of(2026, 8, 2), drafts.get(1).workDate());
+        assertEquals(ShiftType.NIGHT, drafts.get(1).shiftType());
+        assertEquals(new BigDecimal("0.960"), drafts.get(1).confidence());
+    }
+
+    @Test
     void 근무_셀의_confidence를_초안에_기록한다() {
         List<OcrDraftParser.ParsedDraft> drafts = parser.parse(document, YearMonth.of(2026, 8));
         assertEquals(new BigDecimal("0.970"), drafts.get(0).confidence());
