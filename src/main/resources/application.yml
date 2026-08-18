@@ -23,3 +23,6 @@ app:
     refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:P30D}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}

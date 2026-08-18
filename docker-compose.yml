@@ -1,13 +1,15 @@
 services:
   mysql:
     image: mysql:8.4
+    container_name: app-mysql
+    restart: always
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-shiftrhythm}
       MYSQL_USER: ${MYSQL_USER:-shiftrhythm}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
+    expose:
+      - "3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -15,12 +17,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - backend-network
 
   redis:
     image: redis:7.4-alpine
+    container_name: app-redis
+    restart: always
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    expose:
+      - "6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -28,12 +34,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    networks:
+      - backend-network
 
   backend:
     build:
       context: .
+    container_name: app-backend
+    restart: always
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_DATABASE: ${MYSQL_DATABASE:-shiftrhythm}
@@ -44,14 +54,24 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-shiftrhythm-api}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "${SERVER_PORT:-8080}:8080" # 프론트엔드가 호출할 수 있도록 외부 오픈
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - backend-network
 
 volumes:
   mysql-data:
   redis-data:
+
+networks:
+  backend-network:
+    driver: bridge
