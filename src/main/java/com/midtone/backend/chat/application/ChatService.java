@@ -52,6 +52,45 @@ public class ChatService {
                 "일반적인 참고 정보이며 의학적 조언이 아닙니다.", List.of());
     }
 
+    static final String RECOMMEND_PRODUCTS_QUESTION = "내 영양소 목표에 맞는 제품을 추천해줘";
+    static final String NO_NEEDS_ANSWER =
+            "아직 등록된 영양소 목표가 없어 추천할 제품을 찾지 못했어요. 먼저 영양소 목표를 등록해 주세요.";
+    static final String NO_MATCH_ANSWER =
+            "등록하신 영양소 목표와 매칭되는 제품이 아직 없어요. 목표를 수정하면 다시 추천해 드릴게요.";
+
+    @Transactional
+    public ChatSendResponse recommendProducts(LocalDate today) {
+        long userId = userProvider.getCurrentUserId();
+        ChatMessage userMessage =
+                repository.save(new ChatMessage(userId, ChatRole.USER, RECOMMEND_PRODUCTS_QUESTION, null));
+        ChatContextSnapshot snapshot = snapshotBuilder.build(userId, today);
+        if (snapshot.nutrientNeeds().needs().isEmpty()) {
+            return deterministicRecommendationResponse(userId, userMessage, snapshot, NO_NEEDS_ANSWER);
+        }
+        if (snapshot.nutritionRecommendations().recommendations().isEmpty()) {
+            return deterministicRecommendationResponse(userId, userMessage, snapshot, NO_MATCH_ANSWER);
+        }
+        ChatReference reference = referenceCatalog.productRecommendation();
+        GeneratedChatAnswer generated = answerGenerator.generate(
+                new ChatPrompt(RECOMMEND_PRODUCTS_QUESTION, snapshot, reference.excerpt(), reference.domain()));
+        if (generated.safetyFlag() == SafetyFlag.EMERGENCY) return safetyResponse(userId, userMessage, true);
+        if (generated.safetyFlag() == SafetyFlag.MEDICAL_REFERRAL) return safetyResponse(userId, userMessage, false);
+        ChatMessage assistant = repository.save(
+                new ChatMessage(userId, ChatRole.ASSISTANT, generated.answerText(), ChatResponseType.AI));
+        return new ChatSendResponse(userMessage.getId(), assistant.getId(), generated.answerText(), null, List.of(),
+                null, generated.safetyFlag().name(), ChatDomain.NUTRITION.name(), snapshot,
+                "일반적인 참고 정보이며 의학적 조언이 아닙니다.", List.of());
+    }
+
+    private ChatSendResponse deterministicRecommendationResponse(
+            long userId, ChatMessage userMessage, ChatContextSnapshot snapshot, String answer) {
+        ChatMessage assistant =
+                repository.save(new ChatMessage(userId, ChatRole.ASSISTANT, answer, ChatResponseType.AI));
+        return new ChatSendResponse(userMessage.getId(), assistant.getId(), answer, null, List.of(), null,
+                SafetyFlag.NONE.name(), ChatDomain.NUTRITION.name(), snapshot,
+                "일반적인 참고 정보이며 의학적 조언이 아닙니다.", List.of());
+    }
+
     @Transactional
     public ChatFeedbackResponse feedback(long messageId, ChatFeedbackRequest request) {
         long userId = userProvider.getCurrentUserId();

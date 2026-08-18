@@ -28,6 +28,17 @@ public class ChatReferenceCatalog {
                 "개인의 영양 결핍은 증상만으로 판단하지 않는다. context_snapshot에 사용자가 등록한 영양소 목표와 백엔드가 결정적으로 매칭한 제품 후보가 있을 때만 그 후보를 설명한다. 제품명, 기능정보, 매칭 영양소는 주어진 값을 그대로 사용하고 새로운 효능, 우선순위, 복용량을 만들지 않는다. 건강기능식품은 질병의 예방 및 치료를 위한 의약품이 아니다.");
     }
 
+    public ChatReference productRecommendation() {
+        return new ChatReference(ChatDomain.NUTRITION,
+                """
+                사용자가 '제품 추천받기' 버튼을 눌렀다. context_snapshot.nutritionRecommendations.recommendations의 \
+                후보를 주어진 순서 그대로 모두 소개하라(매칭 영양소가 많은 제품이 먼저 정렬되어 있으며 순서를 바꾸지 않는다). \
+                각 후보마다 제품명과 matchedNutrients(사용자가 등록한 영양소 목표와 매칭된 영양소), 그 영양소에 해당하는 \
+                기능정보를 주어진 문구 그대로 한두 문장으로 요약한다. 후보에 없는 제품·원료·효능은 언급하지 않는다. \
+                증상에서 결핍을 진단하거나 복용량·복용법·효과 기간을 만들지 않는다. 구매 권유나 과장 표현 없이 정보만 전달하고, \
+                마지막에 건강기능식품은 의약품이 아니며 질병의 예방·치료를 위한 것이 아니라는 고지를 포함하라.""");
+    }
+
     private boolean contains(String value, String... keywords) {
         for (String keyword : keywords) {
             if (value.contains(keyword)) return true;
