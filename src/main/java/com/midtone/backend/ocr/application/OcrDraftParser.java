@@ -1,6 +1,6 @@
 package com.midtone.backend.ocr.application;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
