@@ -1,5 +1,6 @@
 package com.midtone.backend.nutrition.domain;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,7 +32,7 @@ public class NutritionFavorite {
     public NutritionFavorite(Long userId, Long contentId) {
         this.userId = userId;
         this.contentId = contentId;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE);
     }
 
     public Long getId() { return id; }

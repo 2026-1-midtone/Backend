@@ -9,4 +9,11 @@ public interface NutritionContentRepository extends JpaRepository<NutritionConte
     Page<NutritionContent> findAllByOrderByCreatedAtDescIdDesc(Pageable pageable);
 
     Page<NutritionContent> findAllByCategoryOrderByCreatedAtDescIdDesc(NutritionCategory category, Pageable pageable);
+
+    Page<NutritionContent> findAllByTimingTagOrderByCreatedAtDescIdDesc(NutritionTimingTag timingTag, Pageable pageable);
+
+    Page<NutritionContent> findAllByContentTypeOrderByCreatedAtDescIdDesc(NutritionContentType contentType, Pageable pageable);
+
+    Page<NutritionContent> findAllByTimingTagAndContentTypeOrderByCreatedAtDescIdDesc(
+            NutritionTimingTag timingTag, NutritionContentType contentType, Pageable pageable);
 }

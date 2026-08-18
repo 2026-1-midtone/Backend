@@ -8,6 +8,9 @@ import com.midtone.backend.chat.application.ChatService;
 import com.midtone.backend.coaching.application.CoachingService;
 import com.midtone.backend.home.application.HomeService;
 import com.midtone.backend.nap.application.NapService;
+import com.midtone.backend.nutrition.application.NutrientNeedService;
+import com.midtone.backend.nutrition.application.NutritionContentService;
+import com.midtone.backend.nutrition.application.NutritionRecommendationService;
 import com.midtone.backend.ocr.application.OcrJobService;
 import com.midtone.backend.routine.application.RoutineService;
 import com.midtone.backend.shift.application.pattern.ShiftPatternService;
@@ -105,6 +108,15 @@ class SecurityConfigTest {
 
     @MockitoBean
     private Clock clock;
+
+    @MockitoBean
+    private NutritionContentService nutritionContentService;
+
+    @MockitoBean
+    private NutrientNeedService nutrientNeedService;
+
+    @MockitoBean
+    private NutritionRecommendationService nutritionRecommendationService;
 
     @Test
     void unauthenticatedApiRequestReturnsJsonUnauthorizedResponse() throws Exception {

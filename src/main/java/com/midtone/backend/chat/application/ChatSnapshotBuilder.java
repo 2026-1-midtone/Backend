@@ -4,6 +4,8 @@ import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
 import com.midtone.backend.coaching.domain.CoachingCardRepository;
 import com.midtone.backend.coaching.domain.DailyCoachingRepository;
 import com.midtone.backend.routine.domain.RoutineTaskRepository;
+import com.midtone.backend.nutrition.application.NutrientNeedService;
+import com.midtone.backend.nutrition.application.NutritionRecommendationService;
 import com.midtone.backend.routine.domain.TaskStatus;
 import com.midtone.backend.sleep.application.SleepPatternCalculator;
 import com.midtone.backend.user.domain.UserSettingsRepository;
@@ -19,15 +21,20 @@ public class ChatSnapshotBuilder {
     private final CoachingCardRepository cardRepository;
     private final RoutineTaskRepository routineRepository;
     private final UserSettingsRepository settingsRepository;
+    private final NutrientNeedService nutrientNeedService;
+    private final NutritionRecommendationService nutritionRecommendationService;
 
     public ChatSnapshotBuilder(ChatContextBuilder scheduleBuilder, SleepPatternCalculator sleepCalculator,
             CaffeineStatusCalculator caffeineCalculator, DailyCoachingRepository dailyRepository,
             CoachingCardRepository cardRepository, RoutineTaskRepository routineRepository,
-            UserSettingsRepository settingsRepository) {
+            UserSettingsRepository settingsRepository, NutrientNeedService nutrientNeedService,
+            NutritionRecommendationService nutritionRecommendationService) {
         this.scheduleBuilder = scheduleBuilder; this.sleepCalculator = sleepCalculator;
         this.caffeineCalculator = caffeineCalculator; this.dailyRepository = dailyRepository;
         this.cardRepository = cardRepository; this.routineRepository = routineRepository;
         this.settingsRepository = settingsRepository;
+        this.nutrientNeedService = nutrientNeedService;
+        this.nutritionRecommendationService = nutritionRecommendationService;
     }
 
     public ChatContextSnapshot build(long userId, LocalDate date) {
@@ -43,6 +50,7 @@ public class ChatSnapshotBuilder {
                 .orElse(null);
         return new ChatContextSnapshot(date, scheduleBuilder.build(userId, date), sleepCalculator.calculate(userId, date),
                 caffeineCalculator.calculate(userId, date), sensitivity, cards,
-                new ChatContextSnapshot.RoutineProgress(completed, tasks.size()));
+                new ChatContextSnapshot.RoutineProgress(completed, tasks.size()),
+                nutrientNeedService.get(userId), nutritionRecommendationService.getRecommendations(userId));
     }
 }

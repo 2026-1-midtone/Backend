@@ -22,6 +22,14 @@ public class NutritionContent {
     @Column(nullable = false, length = 30)
     private NutritionCategory category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "content_type", nullable = false, length = 30)
+    private NutritionContentType contentType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "timing_tag", nullable = false, length = 30)
+    private NutritionTimingTag timingTag;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -30,6 +38,15 @@ public class NutritionContent {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
+
+    @Column(name = "thumbnail_url", length = 2048)
+    private String thumbnailUrl;
+
+    @Column(name = "source_url", length = 2048)
+    private String sourceUrl;
+
+    @Column(nullable = false, length = 500)
+    private String disclaimer;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -46,8 +63,13 @@ public class NutritionContent {
 
     public Long getId() { return id; }
     public NutritionCategory getCategory() { return category; }
+    public NutritionContentType getContentType() { return contentType; }
+    public NutritionTimingTag getTimingTag() { return timingTag; }
     public String getTitle() { return title; }
     public String getSummary() { return summary; }
     public String getBody() { return body; }
+    public String getThumbnailUrl() { return thumbnailUrl; }
+    public String getSourceUrl() { return sourceUrl; }
+    public String getDisclaimer() { return disclaimer; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

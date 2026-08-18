@@ -5,6 +5,8 @@ import com.midtone.backend.caffeine.application.CaffeineIntakeException;
 import com.midtone.backend.chat.application.ChatException;
 import com.midtone.backend.coaching.application.CoachingException;
 import com.midtone.backend.nap.application.NapException;
+import com.midtone.backend.nutrition.application.NutrientException;
+import com.midtone.backend.nutrition.application.NutritionException;
 import com.midtone.backend.ocr.application.OcrException;
 import com.midtone.backend.routine.application.RoutineException;
 import com.midtone.backend.shift.application.ShiftException;
@@ -129,6 +131,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleChatException(ChatException exception) {
         return ResponseEntity.status(exception.getErrorCode().getStatus())
                 .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(NutritionException.class)
+    public ResponseEntity<ErrorResponse> handleNutritionException(NutritionException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus()).body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(NutrientException.class)
+    public ResponseEntity<ErrorResponse> handleNutrientException(NutrientException exception) {
+        return ResponseEntity.status(exception.getErrorCode().getStatus()).body(new ErrorResponse(exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -19,6 +19,7 @@ public class OpenAiChatAnswerGenerator implements ChatAnswerGenerator {
             2. reference_excerpt 밖의 의학적 주장을 하지 마라. 진단·처방·복용량 변경 판단을 하지 마라.
             3. safety_flag는 NONE, MEDICAL_REFERRAL, EMERGENCY 중 하나다. 자해·의식소실·호흡곤란·심각한 흉통은 EMERGENCY, 약물·질환의 진단·치료 판단은 MEDICAL_REFERRAL로 분류하라.
             4. 모든 계산은 백엔드가 끝냈다. 답변은 주어진 결과를 설명하거나 질문에 매칭만 하라.
+            5. 영양 제품은 context_snapshot.nutritionRecommendations에 있는 후보만 언급하라. 사용자의 증상에서 영양소 결핍을 진단하지 말고, 제품 기능정보를 확장하거나 복용량·복용법을 만들지 마라. 제품 추천에는 건강기능식품이 의약품이 아니라는 점을 명시하라.
             """;
 
     private final String model;

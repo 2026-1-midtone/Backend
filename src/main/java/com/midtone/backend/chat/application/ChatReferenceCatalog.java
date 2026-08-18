@@ -25,7 +25,7 @@ public class ChatReferenceCatalog {
                     "근무 유형이 바뀌는 전환일에는 백엔드가 계산한 단계별 수면·빛·카페인 조정값만 설명한다.");
         }
         return new ChatReference(ChatDomain.NUTRITION,
-                "영양 질문은 일반적인 참고 정보로만 답하고 질환 진단이나 개인 처방을 하지 않는다.");
+                "개인의 영양 결핍은 증상만으로 판단하지 않는다. context_snapshot에 사용자가 등록한 영양소 목표와 백엔드가 결정적으로 매칭한 제품 후보가 있을 때만 그 후보를 설명한다. 제품명, 기능정보, 매칭 영양소는 주어진 값을 그대로 사용하고 새로운 효능, 우선순위, 복용량을 만들지 않는다. 건강기능식품은 질병의 예방 및 치료를 위한 의약품이 아니다.");
     }
 
     private boolean contains(String value, String... keywords) {
