@@ -110,7 +110,9 @@ public class CoachingService {
         DailyCoaching dailyCoaching = new DailyCoaching(userId, toContent(date, generated));
         dailyCoachingRepository.save(dailyCoaching);
         List<CoachingCard> savedCards = saveCards(dailyCoaching.getId(), generated.cards());
-        routineTaskGenerator.regenerate(userId, date, generated.todayShift().getShiftType(), savedCards);
+        routineTaskGenerator.regenerate(
+                userId, date, generated.todayShift().getShiftType(), generated.todayShift().getStartTime(),
+                savedCards);
         return dailyCoaching;
     }
 

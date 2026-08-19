@@ -48,7 +48,7 @@ public class TransitionService {
                 .detectTransition(userId, date, shift.getShiftType())
                 .orElseThrow(() -> new TransitionException(TransitionException.ErrorCode.NOT_A_TRANSITION_DAY));
         TransitionProtocol protocol = transitionProtocolCatalog.resolve(info.fromShiftType(), info.toShiftType());
-        return TransitionGuideResponse.of(date, info, protocol);
+        return TransitionGuideResponse.of(date, info, protocol, shift.getStartTime());
     }
 
     private List<TransitionListResponse.Item> collectTransitions(List<ShiftSchedule> shifts, LocalDate rangeFrom) {
