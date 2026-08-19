@@ -47,10 +47,18 @@ public class OcrDraftShift {
     }
 
     public OcrDraftShift(Long jobId, LocalDate workDate, ShiftType shiftType, BigDecimal confidence) {
+        this(jobId, workDate, shiftType, confidence, null, null);
+    }
+
+    public OcrDraftShift(
+            Long jobId, LocalDate workDate, ShiftType shiftType, BigDecimal confidence,
+            LocalTime startTime, LocalTime endTime) {
         this.jobId = jobId;
         this.workDate = workDate;
         this.shiftType = shiftType;
         this.confidence = confidence;
+        this.startTime = startTime;
+        this.endTime = endTime;
         this.excluded = false;
     }
 

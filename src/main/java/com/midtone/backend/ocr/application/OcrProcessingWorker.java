@@ -67,7 +67,9 @@ public class OcrProcessingWorker {
             } else {
                 ocrDraftShiftRepository.deleteByJobId(jobId);
                 ocrDraftShiftRepository.saveAll(parsed.stream()
-                        .map(draft -> new OcrDraftShift(jobId, draft.workDate(), draft.shiftType(), draft.confidence()))
+                        .map(draft -> new OcrDraftShift(
+                                jobId, draft.workDate(), draft.shiftType(), draft.confidence(),
+                                draft.startTime(), draft.endTime()))
                         .toList());
                 job.markCompleted();
             }
