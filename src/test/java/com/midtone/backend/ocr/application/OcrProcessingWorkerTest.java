@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.midtone.backend.ocr.documentai.DocumentAiClient;
+import com.midtone.backend.ocr.domain.OcrDraftShift;
 import com.midtone.backend.ocr.domain.OcrDraftShiftRepository;
 import com.midtone.backend.ocr.domain.OcrJob;
 import com.midtone.backend.ocr.domain.OcrJobRepository;
@@ -61,6 +62,24 @@ class OcrProcessingWorkerTest {
         verify(ocrDraftShiftRepository).saveAll(anyList());
         assertEquals(OcrJobStatus.COMPLETED, job.getStatus());
         verify(ocrFallbackExtractor, never()).extract(any(), any(), any());
+    }
+
+    @Test
+    void 시간대가_있는_초안은_시작과_종료_시간을_저장한다() {
+        given(ocrDraftParser.parse(any(), any())).willReturn(List.of(
+                new OcrDraftParser.ParsedDraft(
+                        LocalDate.of(2026, 8, 1), ShiftType.DAY, new BigDecimal("0.970"),
+                        java.time.LocalTime.of(9, 0), java.time.LocalTime.of(18, 0))));
+
+        worker.process(10L);
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<OcrDraftShift>> captor =
+                org.mockito.ArgumentCaptor.forClass((Class) List.class);
+        verify(ocrDraftShiftRepository).saveAll(captor.capture());
+        OcrDraftShift saved = captor.getValue().get(0);
+        assertEquals(java.time.LocalTime.of(9, 0), saved.getStartTime());
+        assertEquals(java.time.LocalTime.of(18, 0), saved.getEndTime());
     }
 
     @Test
