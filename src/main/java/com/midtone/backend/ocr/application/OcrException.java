@@ -24,6 +24,7 @@ public class OcrException extends RuntimeException {
         DRAFT_NOT_FOUND("해당 초안 항목이 없습니다.", HttpStatus.NOT_FOUND),
         JOB_ACCESS_DENIED("접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
         JOB_NOT_COMPLETED("분석이 완료된 작업만 검수·확정할 수 있습니다.", HttpStatus.CONFLICT),
+        DRAFT_DATE_CONFLICT("같은 날짜에 근무 초안이 두 개 이상 있습니다. 확정 전에 하나만 남기고 제외해주세요.", HttpStatus.CONFLICT),
         JOB_NOT_RETRYABLE("실패했거나 완료된 작업만 재시도할 수 있습니다.", HttpStatus.CONFLICT);
 
         private final String message;

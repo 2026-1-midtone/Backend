@@ -5,8 +5,8 @@ import com.midtone.backend.shift.domain.ShiftType;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DateTimeException;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -25,10 +25,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class OcrDraftParser {
 
-    public record ParsedDraft(LocalDate workDate, ShiftType shiftType, BigDecimal confidence) {
+    public record ParsedDraft(
+            LocalDate workDate, ShiftType shiftType, BigDecimal confidence,
+            LocalTime startTime, LocalTime endTime) {
+
+        public ParsedDraft(LocalDate workDate, ShiftType shiftType, BigDecimal confidence) {
+            this(workDate, shiftType, confidence, null, null);
+        }
     }
 
     private static final Pattern DAY_ONLY = Pattern.compile("^(\\d{1,2})일?$");
+    private static final Pattern TIME_RANGE = Pattern.compile("(\\d{1,2}):(\\d{2})-(\\d{1,2}):(\\d{2})");
     private static final Pattern MONTH_DAY = Pattern.compile("^(\\d{1,2})[/월.\\s]\\s*(\\d{1,2})일?$");
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
 
@@ -72,8 +79,7 @@ public class OcrDraftParser {
             }
         }
         if (byDate.isEmpty()) {
-            parseCalendarTokens(document, fullText, targetMonth)
-                    .forEach(draft -> byDate.putIfAbsent(draft.workDate(), draft));
+            return parseCalendarTokens(document, fullText, targetMonth);
         }
         List<ParsedDraft> drafts = new ArrayList<>(byDate.values());
         drafts.sort(Comparator.comparing(ParsedDraft::workDate));
@@ -86,13 +92,16 @@ public class OcrDraftParser {
         if (columns.size() != 7) {
             return List.of();
         }
-        List<RowCluster> rows = calendarRows(tokens, columns, targetMonth);
+        int firstDayColumn = inferFirstDayColumn(tokens, columns, targetMonth);
+        if (firstDayColumn < 0) {
+            return List.of();
+        }
+        List<RowCluster> rows = calendarRows(tokens, columns, firstDayColumn);
         if (rows.size() < 3) {
             return List.of();
         }
 
         double rowSpacing = medianRowSpacing(rows);
-        int firstDayColumn = targetMonth.atDay(1).getDayOfWeek().getValue() % DayOfWeek.values().length;
         List<CalendarCandidate> candidates = new ArrayList<>();
         for (PositionedToken token : tokens) {
             String normalized = token.text().trim().toUpperCase();
@@ -100,7 +109,7 @@ public class OcrDraftParser {
             if (shiftType == null) {
                 continue;
             }
-            int rowIndex = nearestRowIndex(rows, token.y(), rowSpacing);
+            int rowIndex = rowIndexAbove(rows, token.y(), rowSpacing);
             int columnIndex = nearestColumnIndex(columns, token.x());
             if (rowIndex < 0 || columnIndex < 0 || columnIndex > 6) {
                 continue;
@@ -112,7 +121,24 @@ public class OcrDraftParser {
             LocalDate date = targetMonth.atDay(day);
             candidates.add(new CalendarCandidate(
                     date, shiftType, token.confidence(),
-                    TRUNCATED_KOREAN_SHIFT_CODES.contains(normalized) ? normalized : null));
+                    TRUNCATED_KOREAN_SHIFT_CODES.contains(normalized) ? normalized : null,
+                    token.y(), null, null));
+        }
+        for (TimeRangeToken timeToken : timeRangeTokens(tokens)) {
+            int rowIndex = rowIndexAbove(rows, timeToken.y(), rowSpacing);
+            int columnIndex = nearestColumnIndex(columns, timeToken.x());
+            if (rowIndex < 0 || columnIndex < 0 || columnIndex > 6) {
+                continue;
+            }
+            int day = rows.get(rowIndex).weekIndex() * 7 + columnIndex - firstDayColumn + 1;
+            if (day < 1 || day > targetMonth.lengthOfMonth()) {
+                continue;
+            }
+            candidates.add(new CalendarCandidate(
+                    targetMonth.atDay(day),
+                    shiftTypeForTimeRange(timeToken.startTime(), timeToken.endTime()),
+                    timeToken.confidence(), null, timeToken.y(),
+                    timeToken.startTime(), timeToken.endTime()));
         }
         Map<String, Long> truncatedCounts = new HashMap<>();
         for (CalendarCandidate candidate : candidates) {
@@ -130,16 +156,65 @@ public class OcrDraftParser {
         }
         List<ParsedDraft> drafts = new ArrayList<>();
         for (Map.Entry<LocalDate, List<CalendarCandidate>> entry : byDate.entrySet()) {
-            List<CalendarCandidate> cellCandidates = entry.getValue();
-            if (cellCandidates.stream().map(CalendarCandidate::shiftType).distinct().count() != 1) {
+            Map<ShiftType, CalendarCandidate> byType = new LinkedHashMap<>();
+            for (List<CalendarCandidate> slot : badgeSlots(entry.getValue(), rowSpacing)) {
+                if (slot.stream().map(CalendarCandidate::shiftType).distinct().count() != 1) {
+                    continue;
+                }
+                CalendarCandidate strongest = slot.stream()
+                        .max(Comparator.comparing(CalendarCandidate::confidence))
+                        .orElseThrow();
+                byType.merge(strongest.shiftType(), strongest, (first, second) ->
+                        first.confidence().compareTo(second.confidence()) >= 0 ? first : second);
+            }
+            for (CalendarCandidate candidate : byType.values()) {
+                drafts.add(new ParsedDraft(
+                        entry.getKey(), candidate.shiftType(), candidate.confidence(),
+                        candidate.startTime(), candidate.endTime()));
+            }
+        }
+        drafts.sort(Comparator.comparing(ParsedDraft::workDate));
+        return drafts;
+    }
+
+    private int inferFirstDayColumn(List<PositionedToken> tokens, List<Double> columns, YearMonth targetMonth) {
+        int bestScore = 0;
+        List<Integer> bestColumns = new ArrayList<>();
+        for (int candidate = 0; candidate < 7; candidate++) {
+            List<RowCluster> rows = calendarRows(tokens, columns, candidate);
+            if (rows.size() < 3) {
                 continue;
             }
-            CalendarCandidate strongest = cellCandidates.stream()
-                    .max(Comparator.comparing(CalendarCandidate::confidence))
-                    .orElseThrow();
-            drafts.add(new ParsedDraft(entry.getKey(), strongest.shiftType(), strongest.confidence()));
+            int score = rows.stream().mapToInt(RowCluster::voteCount).sum();
+            if (score > bestScore) {
+                bestScore = score;
+                bestColumns.clear();
+                bestColumns.add(candidate);
+            } else if (score == bestScore) {
+                bestColumns.add(candidate);
+            }
         }
-        return drafts;
+        if (bestColumns.size() == 1) {
+            return bestColumns.get(0);
+        }
+        int naturalColumn = targetMonth.atDay(1).getDayOfWeek().getValue() % 7;
+        return bestColumns.contains(naturalColumn) ? naturalColumn : -1;
+    }
+
+    private List<List<CalendarCandidate>> badgeSlots(List<CalendarCandidate> cellCandidates, double rowSpacing) {
+        List<CalendarCandidate> ordered = new ArrayList<>(cellCandidates);
+        ordered.sort(Comparator.comparingDouble(CalendarCandidate::y));
+        List<List<CalendarCandidate>> slots = new ArrayList<>();
+        for (CalendarCandidate candidate : ordered) {
+            List<CalendarCandidate> lastSlot = slots.isEmpty() ? null : slots.get(slots.size() - 1);
+            if (lastSlot == null
+                    || candidate.y() - lastSlot.get(lastSlot.size() - 1).y() > rowSpacing * 0.20) {
+                lastSlot = new ArrayList<>();
+                slots.add(lastSlot);
+            }
+            lastSlot.add(candidate);
+        }
+        return slots;
     }
 
     private List<Double> calendarColumns(List<PositionedToken> tokens) {
@@ -161,10 +236,59 @@ public class OcrDraftParser {
                     });
             cluster.add(token.x());
         }
-        return clusters.stream()
-                .map(cluster -> cluster.stream().mapToDouble(Double::doubleValue).average().orElse(0.0))
-                .sorted()
+        List<List<Double>> orderedClusters = clusters.stream()
+                .sorted(Comparator.comparingDouble(cluster ->
+                        cluster.stream().mapToDouble(Double::doubleValue).average().orElse(0.0)))
                 .toList();
+        List<Double> centers = orderedClusters.stream()
+                .map(cluster -> cluster.stream().mapToDouble(Double::doubleValue).average().orElse(0.0))
+                .toList();
+        if (centers.size() <= 7) {
+            return centers;
+        }
+        return selectEvenlySpacedColumns(orderedClusters, centers);
+    }
+
+    /**
+     * 범례·미니 달력 등 달력 밖 숫자가 여덟 개 이상의 열 클러스터를 만들면,
+     * 등간격으로 늘어선 일곱 열 조합 중 날짜 토큰 지지가 가장 큰 조합을 요일 열로 선택한다.
+     */
+    private List<Double> selectEvenlySpacedColumns(List<List<Double>> orderedClusters, List<Double> centers) {
+        List<Double> best = List.of();
+        int bestSupport = 0;
+        for (int left = 0; left < centers.size() - 1; left++) {
+            for (int right = left + 1; right < centers.size(); right++) {
+                double spacing = (centers.get(right) - centers.get(left)) / 6.0;
+                if (spacing < 0.04) {
+                    continue;
+                }
+                List<Double> selected = new ArrayList<>();
+                int support = 0;
+                for (int position = 0; position < 7; position++) {
+                    double expected = centers.get(left) + position * spacing;
+                    int matched = -1;
+                    double matchedDistance = Double.MAX_VALUE;
+                    for (int i = 0; i < centers.size(); i++) {
+                        double distance = Math.abs(centers.get(i) - expected);
+                        if (distance < matchedDistance) {
+                            matched = i;
+                            matchedDistance = distance;
+                        }
+                    }
+                    if (matchedDistance > spacing * 0.25) {
+                        selected = null;
+                        break;
+                    }
+                    selected.add(centers.get(matched));
+                    support += orderedClusters.get(matched).size();
+                }
+                if (selected != null && support > bestSupport) {
+                    bestSupport = support;
+                    best = List.copyOf(selected);
+                }
+            }
+        }
+        return best;
     }
 
     private List<PositionedToken> positionedTokens(JsonNode document, String fullText) {
@@ -193,7 +317,7 @@ public class OcrDraftParser {
     }
 
     private List<RowCluster> calendarRows(
-            List<PositionedToken> tokens, List<Double> columns, YearMonth targetMonth) {
+            List<PositionedToken> tokens, List<Double> columns, int firstDayColumn) {
         List<PositionedToken> dateTokens = tokens.stream()
                 .filter(token -> isCalendarDay(token.text()))
                 .filter(token -> token.y() > 0.05 && token.y() < 0.95)
@@ -216,7 +340,7 @@ public class OcrDraftParser {
                 .toList();
         List<RowCluster> inferred = new ArrayList<>();
         for (MutableRowCluster cluster : orderedClusters) {
-            inferCalendarRow(cluster, columns, targetMonth)
+            inferCalendarRow(cluster, columns, firstDayColumn)
                     .ifPresent(inferred::add);
         }
         double weekHeight = inferredWeekHeight(inferred);
@@ -257,8 +381,7 @@ public class OcrDraftParser {
     }
 
     private Optional<RowCluster> inferCalendarRow(
-            MutableRowCluster cluster, List<Double> columns, YearMonth targetMonth) {
-        int firstDayColumn = targetMonth.atDay(1).getDayOfWeek().getValue() % 7;
+            MutableRowCluster cluster, List<Double> columns, int firstDayColumn) {
         Map<Integer, Integer> votes = new HashMap<>();
         for (PositionedToken token : cluster.tokens) {
             int column = nearestColumnIndex(columns, token.x());
@@ -322,17 +445,17 @@ public class OcrDraftParser {
         return spacings.get(spacings.size() / 2);
     }
 
-    private int nearestRowIndex(List<RowCluster> rows, double tokenY, double rowSpacing) {
-        int nearest = -1;
-        double nearestDistance = Double.MAX_VALUE;
+    private int rowIndexAbove(List<RowCluster> rows, double tokenY, double rowSpacing) {
+        int above = -1;
         for (int i = 0; i < rows.size(); i++) {
-            double distance = Math.abs(rows.get(i).y() - tokenY);
-            if (distance < nearestDistance) {
-                nearest = i;
-                nearestDistance = distance;
+            if (tokenY >= rows.get(i).y() - rowSpacing * 0.20) {
+                above = i;
             }
         }
-        return nearestDistance <= rowSpacing * 0.45 ? nearest : -1;
+        if (above < 0) {
+            return -1;
+        }
+        return tokenY - rows.get(above).y() <= rowSpacing * 0.95 ? above : -1;
     }
 
     private int nearestColumnIndex(List<Double> columns, double tokenX) {
@@ -356,7 +479,91 @@ public class OcrDraftParser {
     }
 
     private record CalendarCandidate(
-            LocalDate workDate, ShiftType shiftType, BigDecimal confidence, String truncatedCode) {
+            LocalDate workDate, ShiftType shiftType, BigDecimal confidence, String truncatedCode, double y,
+            LocalTime startTime, LocalTime endTime) {
+    }
+
+    private record TimeRangeToken(LocalTime startTime, LocalTime endTime, double x, double y, BigDecimal confidence) {
+    }
+
+    /**
+     * OCR이 "09:00-18:00"을 여러 토큰으로 쪼개도 같은 줄의 토큰을 이어붙여 시간대 배지를 복원한다.
+     */
+    private List<TimeRangeToken> timeRangeTokens(List<PositionedToken> tokens) {
+        List<List<PositionedToken>> lines = new ArrayList<>();
+        for (PositionedToken token : tokens.stream()
+                .sorted(Comparator.comparingDouble(PositionedToken::y))
+                .toList()) {
+            List<PositionedToken> line = lines.isEmpty() ? null : lines.get(lines.size() - 1);
+            if (line == null
+                    || Math.abs(line.stream().mapToDouble(PositionedToken::y).average().orElse(0.0) - token.y())
+                    > 0.008) {
+                line = new ArrayList<>();
+                lines.add(line);
+            }
+            line.add(token);
+        }
+        List<TimeRangeToken> result = new ArrayList<>();
+        for (List<PositionedToken> line : lines) {
+            line.sort(Comparator.comparingDouble(PositionedToken::x));
+            StringBuilder text = new StringBuilder();
+            List<Integer> charToToken = new ArrayList<>();
+            for (int i = 0; i < line.size(); i++) {
+                String tokenText = line.get(i).text().trim();
+                for (int c = 0; c < tokenText.length(); c++) {
+                    charToToken.add(i);
+                }
+                text.append(tokenText);
+            }
+            Matcher matcher = TIME_RANGE.matcher(text);
+            while (matcher.find()) {
+                LocalTime start = parseTime(matcher.group(1), matcher.group(2));
+                LocalTime end = parseTime(matcher.group(3), matcher.group(4));
+                if (start == null || end == null || start.equals(end)) {
+                    continue;
+                }
+                double x = 0.0;
+                double y = 0.0;
+                BigDecimal confidence = null;
+                int tokenCount = 0;
+                int previousToken = -1;
+                for (int c = matcher.start(); c < matcher.end(); c++) {
+                    int tokenIndex = charToToken.get(c);
+                    if (tokenIndex == previousToken) {
+                        continue;
+                    }
+                    previousToken = tokenIndex;
+                    PositionedToken token = line.get(tokenIndex);
+                    x += token.x();
+                    y += token.y();
+                    confidence = confidence == null || token.confidence().compareTo(confidence) < 0
+                            ? token.confidence()
+                            : confidence;
+                    tokenCount++;
+                }
+                result.add(new TimeRangeToken(start, end, x / tokenCount, y / tokenCount, confidence));
+            }
+        }
+        return result;
+    }
+
+    private LocalTime parseTime(String hour, String minute) {
+        int hourValue = Integer.parseInt(hour);
+        int minuteValue = Integer.parseInt(minute);
+        if (hourValue > 23 || minuteValue > 59) {
+            return null;
+        }
+        return LocalTime.of(hourValue, minuteValue);
+    }
+
+    private ShiftType shiftTypeForTimeRange(LocalTime startTime, LocalTime endTime) {
+        if (!endTime.isAfter(startTime) || startTime.getHour() >= 20) {
+            return ShiftType.NIGHT;
+        }
+        if (startTime.getHour() >= 11) {
+            return ShiftType.EVENING;
+        }
+        return ShiftType.DAY;
     }
 
     private static class MutableRowCluster {
