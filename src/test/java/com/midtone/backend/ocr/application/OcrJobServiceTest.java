@@ -228,6 +228,37 @@ class OcrJobServiceTest {
     }
 
     @Test
+    void 같은_날짜에_초안이_두_개_이상_남아있으면_확정_시_409_예외를_던진다() {
+        OcrJob job = completedJob();
+        given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
+        OcrDraftShift off = new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.OFF, new BigDecimal("0.960"));
+        OcrDraftShift night =
+                new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.NIGHT, new BigDecimal("0.970"));
+        given(ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(10L)).willReturn(List.of(off, night));
+
+        OcrException exception = assertThrows(OcrException.class, () -> service.confirm(10L));
+
+        assertEquals(OcrException.ErrorCode.DRAFT_DATE_CONFLICT, exception.getErrorCode());
+    }
+
+    @Test
+    void 같은_날짜의_중복_초안이_excluded면_충돌로_보지_않는다() {
+        OcrJob job = completedJob();
+        given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
+        OcrDraftShift off = new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.OFF, new BigDecimal("0.960"));
+        off.applyCorrection(null, null, null, null, true);
+        OcrDraftShift night =
+                new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.NIGHT, new BigDecimal("0.970"));
+        given(ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(10L)).willReturn(List.of(off, night));
+        given(shiftScheduleRepository.findByUserIdAndWorkDate(anyLong(), any())).willReturn(Optional.empty());
+        given(coachingTrigger.triggerForRange(any(), any())).willReturn(List.of());
+
+        ConfirmOcrJobResponse response = service.confirm(10L);
+
+        assertEquals(1, response.confirmedCount());
+    }
+
+    @Test
     void excluded_초안은_확정에서_제외한다() {
         OcrJob job = completedJob();
         given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));

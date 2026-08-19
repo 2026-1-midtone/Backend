@@ -96,6 +96,9 @@ public class OcrJobService {
         List<OcrDraftShift> drafts = ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(jobId).stream()
                 .filter(draft -> !draft.isExcluded())
                 .toList();
+        if (drafts.stream().map(OcrDraftShift::getWorkDate).distinct().count() != drafts.size()) {
+            throw new OcrException(OcrException.ErrorCode.DRAFT_DATE_CONFLICT);
+        }
         List<String> replacedDates = new ArrayList<>();
         List<ShiftSchedule> newShifts = new ArrayList<>();
         for (OcrDraftShift draft : drafts) {
