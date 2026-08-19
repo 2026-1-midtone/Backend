@@ -84,6 +84,7 @@ class CoachingServiceTest {
                 org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.eq(date),
                 org.mockito.ArgumentMatchers.eq(ShiftType.NIGHT),
+                org.mockito.ArgumentMatchers.eq(LocalTime.of(22, 0)),
                 org.mockito.ArgumentMatchers.anyList());
     }
 

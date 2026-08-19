@@ -1,10 +1,14 @@
 package com.midtone.backend.coaching.application;
 
+import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
+import com.midtone.backend.caffeine.application.DailyCaffeineStatus;
 import com.midtone.backend.coaching.domain.CoachingCard.CoachingCardContent;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftScheduleWindow;
+import com.midtone.backend.sleep.application.SleepPattern;
+import com.midtone.backend.sleep.application.SleepPatternCalculator;
 import com.midtone.backend.user.domain.CaffeineSensitivity;
 import com.midtone.backend.user.domain.UserSettings;
 import com.midtone.backend.user.domain.UserSettingsRepository;
@@ -23,16 +27,22 @@ public class DailyCoachingGenerator {
     private final UserSettingsRepository userSettingsRepository;
     private final TransitionDetector transitionDetector;
     private final CoachingCardGenerator coachingCardGenerator;
+    private final SleepPatternCalculator sleepPatternCalculator;
+    private final CaffeineStatusCalculator caffeineStatusCalculator;
 
     public DailyCoachingGenerator(
             ShiftScheduleRepository shiftScheduleRepository,
             UserSettingsRepository userSettingsRepository,
             TransitionDetector transitionDetector,
-            CoachingCardGenerator coachingCardGenerator) {
+            CoachingCardGenerator coachingCardGenerator,
+            SleepPatternCalculator sleepPatternCalculator,
+            CaffeineStatusCalculator caffeineStatusCalculator) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.userSettingsRepository = userSettingsRepository;
         this.transitionDetector = transitionDetector;
         this.coachingCardGenerator = coachingCardGenerator;
+        this.sleepPatternCalculator = sleepPatternCalculator;
+        this.caffeineStatusCalculator = caffeineStatusCalculator;
     }
 
     public Optional<GeneratedCoaching> generate(long userId, LocalDate date) {
@@ -47,7 +57,10 @@ public class DailyCoachingGenerator {
         int preferredNapMinutes = napMinutesOf(settings);
         boolean transitionDay =
                 transitionDetector.detectTransition(userId, date, todayShift.getShiftType()).isPresent();
-        List<CoachingCardContent> cards = coachingCardGenerator.generate(todayShift, sensitivity, preferredNapMinutes);
+        SleepPattern sleepPattern = sleepPatternCalculator.calculate(userId, date);
+        DailyCaffeineStatus caffeineStatus = caffeineStatusCalculator.calculate(userId, date);
+        List<CoachingCardContent> cards = coachingCardGenerator.generate(
+                todayShift, sensitivity, preferredNapMinutes, sleepPattern, caffeineStatus);
         return new GeneratedCoaching(todayShift, nextShiftStartAt, transitionDay, sensitivity, cards);
     }
 

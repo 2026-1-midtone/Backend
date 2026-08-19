@@ -53,7 +53,7 @@ class RoutineTaskGeneratorTest {
         ReflectionTestUtils.setField(card, "id", 10L);
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.DAY)).thenReturn(Optional.empty());
 
-        generator().regenerate(1L, DATE, ShiftType.DAY, List.of(card));
+        generator().regenerate(1L, DATE, ShiftType.DAY, null, List.of(card));
 
         ArgumentCaptor<List<RoutineTask>> captor = ArgumentCaptor.captor();
         InOrder order = inOrder(routineTaskRepository);
@@ -80,7 +80,7 @@ class RoutineTaskGeneratorTest {
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.DAY))
                 .thenReturn(Optional.of(new TransitionDetector.TransitionInfo(ShiftType.NIGHT, ShiftType.DAY)));
 
-        generator().regenerate(1L, DATE, ShiftType.DAY, List.of());
+        generator().regenerate(1L, DATE, ShiftType.DAY, null, List.of());
 
         ArgumentCaptor<List<RoutineTask>> captor = ArgumentCaptor.captor();
         org.mockito.Mockito.verify(routineTaskRepository).saveAll(captor.capture());
@@ -99,7 +99,7 @@ class RoutineTaskGeneratorTest {
     void 코칭_카드와_전환_단계가_없으면_저장하지_않는다() {
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.OFF)).thenReturn(Optional.empty());
 
-        generator().regenerate(1L, DATE, ShiftType.OFF, List.of());
+        generator().regenerate(1L, DATE, ShiftType.OFF, null, List.of());
 
         org.mockito.Mockito.verify(routineTaskRepository)
                 .deleteAllByUserIdAndTaskDateAndSourceTypeIn(eq(1L), eq(DATE), anyCollection());
