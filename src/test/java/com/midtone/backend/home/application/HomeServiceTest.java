@@ -5,6 +5,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.nap.application.NapService;
 import com.midtone.backend.routine.application.RoutineService;
@@ -35,12 +36,13 @@ class HomeServiceTest {
 
     @Test
     void 근무_루틴_코칭_낮잠_섹션을_조합해서_대시보드를_반환한다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
         HomeScheduleSectionBuilder.ScheduleSection scheduleSection =
                 new HomeScheduleSectionBuilder.ScheduleSection(null, null, false, null);
         RoutineService.DailySummary summary =
-                new RoutineService.DailySummary(LocalDate.now(), 6, 4, 1, 0.67, List.of(), List.of());
+                new RoutineService.DailySummary(today, 6, 4, 1, 0.67, List.of(), List.of());
         RoutineService.RoutineReport report = new RoutineService.RoutineReport(
-                "7d", LocalDate.now().minusDays(6), LocalDate.now(), 0.71, new RoutineService.Streak(12, 21, null));
+                "7d", today.minusDays(6), today, 0.71, new RoutineService.Streak(12, 21, null));
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(homeScheduleSectionBuilder.build(eq(1L), any(LocalDate.class))).thenReturn(scheduleSection);
         when(homeCoachingSectionBuilder.build(any(LocalDate.class))).thenReturn(List.of());
@@ -50,7 +52,7 @@ class HomeServiceTest {
 
         HomeDashboardResponse response = homeService.getDashboard();
 
-        assertEquals(LocalDate.now().toString(), response.date());
+        assertEquals(today.toString(), response.date());
         assertEquals(6, response.routineProgress().total());
         assertEquals(4, response.routineProgress().done());
         assertEquals(0.67, response.routineProgress().completionRate());

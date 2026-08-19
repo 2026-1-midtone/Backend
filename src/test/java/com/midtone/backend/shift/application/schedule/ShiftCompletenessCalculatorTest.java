@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
+import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
 import com.midtone.backend.shift.application.ShiftException;
 import com.midtone.backend.shift.domain.ShiftSchedule;
@@ -31,7 +32,7 @@ class ShiftCompletenessCalculatorTest {
 
     @Test
     void 최소_4주_충족_현황을_조회한다() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
         ShiftSchedule confirmedShift = new ShiftSchedule(1L, today, ShiftType.DAY, new ShiftTime(null, null));
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
