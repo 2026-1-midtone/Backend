@@ -88,6 +88,15 @@ public class ShiftSchedule {
         }
     }
 
+    /**
+     * 패턴 적용처럼 근무 유형이 통째로 바뀌는 경우. 이전 유형의 시각이 남으면 안 되므로 시각도 함께 덮어쓴다.
+     */
+    public void changeType(ShiftType shiftType, ShiftTime shiftTime) {
+        this.shiftType = shiftType;
+        this.startTime = shiftTime.startTime();
+        this.endTime = shiftTime.endTime();
+    }
+
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public LocalDate getWorkDate() { return workDate; }

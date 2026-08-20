@@ -32,6 +32,8 @@ class ShiftServiceTest {
     private CurrentUserIdProvider currentUserIdProvider;
     @Mock
     private ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    @Mock
+    private ShiftTimeDefaultService shiftTimeDefaultService;
 
     @InjectMocks
     private ShiftService shiftService;
@@ -57,6 +59,7 @@ class ShiftServiceTest {
         CreateShiftRequest request = new CreateShiftRequest("2026-08-05", "OFF", null, null);
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(shiftScheduleRepository.existsByUserIdAndWorkDate(1L, LocalDate.of(2026, 8, 5))).thenReturn(false);
+        when(shiftTimeDefaultService.resolve(1L, ShiftType.OFF)).thenReturn(new ShiftTime(null, null));
 
         ShiftResponse response = shiftService.createShift(request);
 

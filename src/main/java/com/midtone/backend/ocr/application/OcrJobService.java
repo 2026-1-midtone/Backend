@@ -8,6 +8,7 @@ import com.midtone.backend.ocr.domain.OcrJob;
 import com.midtone.backend.ocr.domain.OcrJobRepository;
 import com.midtone.backend.ocr.domain.OcrJobStatus;
 import com.midtone.backend.shift.application.schedule.ShiftCoachingRegenerationTrigger;
+import com.midtone.backend.shift.application.schedule.ShiftTimeDefaultService;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftTime;
@@ -19,6 +20,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,7 @@ public class OcrJobService {
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final OcrProcessingWorker ocrProcessingWorker;
     private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    private final ShiftTimeDefaultService shiftTimeDefaultService;
     private final CurrentUserIdProvider currentUserIdProvider;
 
     public OcrJobService(
@@ -48,12 +51,14 @@ public class OcrJobService {
             ShiftScheduleRepository shiftScheduleRepository,
             OcrProcessingWorker ocrProcessingWorker,
             ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger,
+            ShiftTimeDefaultService shiftTimeDefaultService,
             CurrentUserIdProvider currentUserIdProvider) {
         this.ocrJobRepository = ocrJobRepository;
         this.ocrDraftShiftRepository = ocrDraftShiftRepository;
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.ocrProcessingWorker = ocrProcessingWorker;
         this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
+        this.shiftTimeDefaultService = shiftTimeDefaultService;
         this.currentUserIdProvider = currentUserIdProvider;
     }
 
@@ -125,6 +130,7 @@ public class OcrJobService {
         List<OcrDraftShift> drafts = keepBestDraftPerDate(candidates, skippedDates);
         List<String> replacedDates = new ArrayList<>();
         List<ShiftSchedule> newShifts = new ArrayList<>();
+        Map<ShiftType, ShiftTime> defaultTimes = new EnumMap<>(ShiftType.class);
         for (OcrDraftShift draft : drafts) {
             shiftScheduleRepository.findByUserIdAndWorkDate(userId, draft.getWorkDate()).ifPresent(existing -> {
                 shiftScheduleRepository.delete(existing);
@@ -132,7 +138,7 @@ public class OcrJobService {
             });
             newShifts.add(ShiftSchedule.fromOcr(
                     userId, draft.getWorkDate(), draft.getShiftType(),
-                    new ShiftTime(draft.getStartTime(), draft.getEndTime()), draft.getConfidence()));
+                    resolveShiftTime(userId, draft, defaultTimes), draft.getConfidence()));
         }
         shiftScheduleRepository.flush();
         shiftScheduleRepository.saveAll(newShifts);
@@ -144,6 +150,22 @@ public class OcrJobService {
         job.markConfirmed();
         ocrJobRepository.save(job);
         return new ConfirmOcrJobResponse(newShifts.size(), replacedDates, affectedCoachingDates, skippedDates);
+    }
+
+    /**
+     * 근무표에서 시각을 못 읽어낸 초안은 사용자가 정한 근무 유형별 기본 시각으로 채운다.
+     * 시각이 비어 있으면 코칭 카드·다음 근무·야간 영양 타이밍이 계산되지 않기 때문이다.
+     * 유형별 기본값은 확정 한 번에 유형당 한 번만 읽는다.
+     */
+    private ShiftTime resolveShiftTime(long userId, OcrDraftShift draft, Map<ShiftType, ShiftTime> defaultTimes) {
+        if (draft.getStartTime() != null && draft.getEndTime() != null) {
+            return new ShiftTime(draft.getStartTime(), draft.getEndTime());
+        }
+        ShiftTime fallback = defaultTimes.computeIfAbsent(
+                draft.getShiftType(), shiftType -> shiftTimeDefaultService.resolve(userId, shiftType));
+        return new ShiftTime(
+                draft.getStartTime() != null ? draft.getStartTime() : fallback.startTime(),
+                draft.getEndTime() != null ? draft.getEndTime() : fallback.endTime());
     }
 
     @Transactional
