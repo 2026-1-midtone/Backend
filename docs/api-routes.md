@@ -72,6 +72,7 @@ Content-Type: application/json
 | DELETE | `/api/v1/users/me/nutrient-needs/{nutrientCode}` |
 | GET | `/api/v1/users/me/favorites` |
 | GET | `/api/v1/users/me/nutrition-product-recommendations` |
+| GET / PUT | `/api/v1/users/me/shift-time-defaults` |
 | GET | `/api/v1/home/dashboard` |
 | POST / GET | `/api/v1/shifts` |
 | PATCH / DELETE | `/api/v1/shifts/{shiftId}` |
