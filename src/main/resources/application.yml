@@ -2,7 +2,18 @@ spring:
   application:
     name: backend
   profiles:
-    default: local
+    # 프로파일을 지정하지 않은 배포는 인증이 켜진 prod로 뜬다.
+    # 개발용 인증 우회는 SPRING_PROFILES_ACTIVE=local 을 명시할 때만 활성화된다.
+    default: prod
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:shiftrhythm}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${MYSQL_USER:shiftrhythm}
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   servlet:
     multipart:
       max-file-size: 10MB
