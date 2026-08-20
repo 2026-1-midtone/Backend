@@ -117,7 +117,8 @@ class CaffeineIntakeServiceTest {
         CaffeineIntakeListResponse result = service.getIntakes(
                 LocalDate.parse("2026-08-18"), LocalDate.parse("2026-08-18"));
 
-        assertEquals(200, result.totalAmountMg());
+        // 80mg×1.00잔 + 120mg×0.50잔 = 80 + 60 = 140mg
+        assertEquals(140, result.totalAmountMg());
         assertEquals(new BigDecimal("1.50"), result.totalServings());
         assertEquals(2, result.intakes().size());
     }

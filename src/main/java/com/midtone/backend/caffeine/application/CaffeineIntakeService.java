@@ -64,10 +64,8 @@ public class CaffeineIntakeService {
         List<CaffeineIntake> found = caffeineIntakeRepository
                 .findByUserIdAndConsumedAtBetweenOrderByConsumedAtAsc(
                         userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
-        int totalAmountMg = found.stream().mapToInt(CaffeineIntake::getAmountMg).sum();
-        BigDecimal totalServings = found.stream()
-                .map(CaffeineIntake::getServings)
-                .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+        int totalAmountMg = CaffeineTotals.totalAmountMg(found);
+        BigDecimal totalServings = CaffeineTotals.totalServings(found);
         return new CaffeineIntakeListResponse(
                 found.stream().map(CaffeineIntakeResponse::from).toList(),
                 totalAmountMg,

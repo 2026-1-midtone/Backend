@@ -5,6 +5,8 @@ import static org.mockito.BDDMockito.given;
 
 import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
 import com.midtone.backend.caffeine.application.DailyCaffeineStatus;
+import com.midtone.backend.caffeine.domain.CaffeineIntake;
+import com.midtone.backend.caffeine.domain.CaffeineIntakeRepository;
 import com.midtone.backend.coaching.domain.CoachingCardRepository;
 import com.midtone.backend.coaching.domain.DailyCoachingRepository;
 import com.midtone.backend.nutrition.application.NutrientNeedResponse;
@@ -36,6 +38,7 @@ class ChatSnapshotBuilderTest {
     @Mock CoachingCardRepository cardRepository;
     @Mock RoutineTaskRepository routineRepository;
     @Mock SleepLogRepository sleepLogRepository;
+    @Mock CaffeineIntakeRepository caffeineIntakeRepository;
     @Mock UserSettingsRepository settingsRepository;
     @Mock NutrientNeedService nutrientNeedService;
     @Mock NutritionRecommendationService recommendationService;
@@ -51,15 +54,15 @@ class ChatSnapshotBuilderTest {
                         List.of("VITAMIN_D"), List.of(), "의약품이 아닙니다.")));
         given(contextBuilder.build(1L, date)).willReturn("schedule");
         given(sleepCalculator.calculate(1L, date)).willReturn(new SleepPattern(null, null, null, null, 0, date, date));
-        given(caffeineCalculator.calculate(1L, date)).willReturn(new DailyCaffeineStatus(date, 0, new BigDecimal("0.00"), 400, false));
+        given(caffeineCalculator.calculate(1L, date)).willReturn(new DailyCaffeineStatus(date, 0, new BigDecimal("0.00"), false));
         given(dailyRepository.findByUserIdAndCoachingDate(1L, date)).willReturn(Optional.empty());
         given(routineRepository.findAllByUserIdAndTaskDateOrderByIdAsc(1L, date)).willReturn(List.of());
         given(settingsRepository.findById(1L)).willReturn(Optional.empty());
         given(nutrientNeedService.get(1L)).willReturn(needs);
         given(recommendationService.getRecommendations(1L)).willReturn(recommendations);
         ChatSnapshotBuilder builder = new ChatSnapshotBuilder(contextBuilder, sleepCalculator, caffeineCalculator,
-                dailyRepository, cardRepository, routineRepository, sleepLogRepository, settingsRepository,
-                nutrientNeedService, recommendationService);
+                dailyRepository, cardRepository, routineRepository, sleepLogRepository, caffeineIntakeRepository,
+                settingsRepository, nutrientNeedService, recommendationService);
 
         ChatContextSnapshot snapshot = builder.build(1L, date);
 
@@ -83,8 +86,8 @@ class ChatSnapshotBuilderTest {
                         "Asia/Seoul", SleepLogSource.MANUAL)));
 
         ChatSnapshotBuilder builder = new ChatSnapshotBuilder(contextBuilder, sleepCalculator, caffeineCalculator,
-                dailyRepository, cardRepository, routineRepository, sleepLogRepository, settingsRepository,
-                nutrientNeedService, recommendationService);
+                dailyRepository, cardRepository, routineRepository, sleepLogRepository, caffeineIntakeRepository,
+                settingsRepository, nutrientNeedService, recommendationService);
         ChatContextSnapshot snapshot = builder.build(1L, date);
 
         org.junit.jupiter.api.Assertions.assertEquals(1, snapshot.recentSleepLogs().size());
@@ -92,5 +95,32 @@ class ChatSnapshotBuilderTest {
         org.junit.jupiter.api.Assertions.assertEquals("2026-08-18T09:00", log.sleptAt());
         org.junit.jupiter.api.Assertions.assertEquals("2026-08-18T16:00", log.wokeAt());
         org.junit.jupiter.api.Assertions.assertEquals(420, log.durationMinutes());
+    }
+
+    @Test
+    void 최근_카페인_섭취_기록을_스냅샷에_넣는다() {
+        LocalDate date = LocalDate.parse("2026-08-19");
+        given(dailyRepository.findByUserIdAndCoachingDate(1L, date)).willReturn(Optional.empty());
+        given(routineRepository.findAllByUserIdAndTaskDateOrderByIdAsc(1L, date)).willReturn(List.of());
+        given(settingsRepository.findById(1L)).willReturn(Optional.empty());
+        given(nutrientNeedService.get(1L)).willReturn(new NutrientNeedResponse(List.of()));
+        given(recommendationService.getRecommendations(1L)).willReturn(new NutritionRecommendationResponse(List.of()));
+        given(caffeineIntakeRepository.findByUserIdAndConsumedAtBetweenOrderByConsumedAtAsc(
+                        1L, date.minusDays(7).atStartOfDay(), date.plusDays(1).atStartOfDay()))
+                .willReturn(List.of(new CaffeineIntake(1L,
+                        java.time.LocalDateTime.parse("2026-08-19T09:00:00"),
+                        "Asia/Seoul", 100, new BigDecimal("2.00"), "COFFEE")));
+
+        ChatSnapshotBuilder builder = new ChatSnapshotBuilder(contextBuilder, sleepCalculator, caffeineCalculator,
+                dailyRepository, cardRepository, routineRepository, sleepLogRepository, caffeineIntakeRepository,
+                settingsRepository, nutrientNeedService, recommendationService);
+        ChatContextSnapshot snapshot = builder.build(1L, date);
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, snapshot.recentCaffeineIntakes().size());
+        ChatContextSnapshot.RecentCaffeineIntake intake = snapshot.recentCaffeineIntakes().get(0);
+        org.junit.jupiter.api.Assertions.assertEquals("2026-08-19T09:00", intake.consumedAt());
+        org.junit.jupiter.api.Assertions.assertEquals(100, intake.amountMg());
+        org.junit.jupiter.api.Assertions.assertEquals(new BigDecimal("2.00"), intake.servings());
+        org.junit.jupiter.api.Assertions.assertEquals("COFFEE", intake.beverageType());
     }
 }
