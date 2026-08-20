@@ -43,7 +43,10 @@ public record HomeDashboardResponse(
     public record RoutineProgress(int total, int done, double completionRate) {
     }
 
-    public record TopCoachingCard(Long cardId, String cardType, String title, String windowStart) {
+    /**
+     * @param windowEnd 이미 지난 시간대인지 앱이 판단해 흐리게 보여줄 수 있도록 함께 내려준다.
+     */
+    public record TopCoachingCard(Long cardId, String cardType, String title, String windowStart, String windowEnd) {
     }
 
     public record Streak(int currentStreak) {
