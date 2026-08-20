@@ -30,7 +30,7 @@ public class RoutineService {
         List<com.midtone.backend.routine.domain.RoutineTask> tasks = findTasks(date);
         List<RoutineTaskResponse> mappedTasks = tasks.stream().map(task -> new RoutineTaskResponse(
                 task.getId(), task.getSourceType(), task.getSourceId(), task.getCategory(), task.getTitle(), task.getTip(),
-                task.getStatus().name())).toList();
+                format(task.getWindowStart()), format(task.getWindowEnd()), task.getStatus().name())).toList();
         int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
         int skipped = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.SKIPPED).count();
         int total = tasks.size();
@@ -95,6 +95,10 @@ public class RoutineService {
         }
     }
 
+    private static String format(LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.atZone(DateTimeDefaults.DEFAULT_ZONE).toOffsetDateTime().toString();
+    }
+
     private List<com.midtone.backend.routine.domain.RoutineTask> findTasks(LocalDate date) {
         return routineTaskRepository.findAllByUserIdAndTaskDateOrderByIdAsc(currentUserIdProvider.getCurrentUserId(), date);
     }
@@ -110,8 +114,11 @@ public class RoutineService {
     public record DailyRoutine(LocalDate taskDate, List<RoutineTaskResponse> tasks, Progress progress) {
     }
 
+    /**
+     * @param windowStart 이 할 일을 하기 좋은 시간대의 시작. 코칭 카드와 같은 오프셋 표기를 쓴다.
+     */
     public record RoutineTaskResponse(Long taskId, String sourceType, Long sourceId, String category, String title,
-                                      String tip, String status) {
+                                      String tip, String windowStart, String windowEnd, String status) {
     }
 
     public record Progress(int total, int done, int skipped, double completionRate) {

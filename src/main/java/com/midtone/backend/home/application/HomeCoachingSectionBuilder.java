@@ -21,7 +21,7 @@ public class HomeCoachingSectionBuilder {
     }
 
     public List<HomeDashboardResponse.TopCoachingCard> build(LocalDate date) {
-        return selectUpcomingTopCards(fetchCards(date));
+        return selectTopCards(fetchCards(date));
     }
 
     private List<TodayCoachingResponse.Card> fetchCards(LocalDate date) {
@@ -32,21 +32,26 @@ public class HomeCoachingSectionBuilder {
         }
     }
 
-    private List<HomeDashboardResponse.TopCoachingCard> selectUpcomingTopCards(List<TodayCoachingResponse.Card> cards) {
+    /**
+     * 아직 남은 시간대를 먼저 보여주되, 이미 지난 시간대도 함께 준다.
+     * 늦은 시간에 홈 화면의 코칭 영역이 통째로 비어 보이지 않게 하려는 것이다.
+     */
+    private List<HomeDashboardResponse.TopCoachingCard> selectTopCards(List<TodayCoachingResponse.Card> cards) {
         OffsetDateTime now = OffsetDateTime.now();
         return cards.stream()
-                .filter(card -> isUpcoming(card, now))
-                .sorted(Comparator.comparing(card -> OffsetDateTime.parse(card.windowStart())))
+                .sorted(Comparator.comparing((TodayCoachingResponse.Card card) -> isPast(card, now))
+                        .thenComparing(card -> OffsetDateTime.parse(card.windowStart())))
                 .limit(MAX_TOP_CARDS)
                 .map(this::toTopCard)
                 .toList();
     }
 
-    private boolean isUpcoming(TodayCoachingResponse.Card card, OffsetDateTime now) {
-        return OffsetDateTime.parse(card.windowEnd()).isAfter(now);
+    private boolean isPast(TodayCoachingResponse.Card card, OffsetDateTime now) {
+        return !OffsetDateTime.parse(card.windowEnd()).isAfter(now);
     }
 
     private HomeDashboardResponse.TopCoachingCard toTopCard(TodayCoachingResponse.Card card) {
-        return new HomeDashboardResponse.TopCoachingCard(card.cardId(), card.cardType(), card.title(), card.windowStart());
+        return new HomeDashboardResponse.TopCoachingCard(
+                card.cardId(), card.cardType(), card.title(), card.windowStart(), card.windowEnd());
     }
 }
