@@ -84,7 +84,52 @@ public class RoutineService {
             if (completedDates.contains(date)) { running++; longest = Math.max(longest, running); } else { running = 0; }
         }
         LocalDate lastCheckinDate = completedDates.stream().max(LocalDate::compareTo).orElse(null);
-        return new RoutineReport(period, from, to, completionRate, new Streak(current, longest, lastCheckinDate));
+        List<CategoryCompletion> byCategory = summarizeByCategory(tasks);
+        return new RoutineReport(period, from, to, completionRate, byCategory, weakestCategory(byCategory),
+                summarizeByDay(tasks, from, to), new Streak(current, longest, lastCheckinDate));
+    }
+
+    /**
+     * 분류별 완료율. 어떤 습관이 잘 지켜지지 않는지 화면에서 그대로 보여주기 위한 값이다.
+     * 순서를 고정해야 화면이 매번 뒤바뀌지 않으므로 분류 이름순으로 정렬한다.
+     */
+    private static List<CategoryCompletion> summarizeByCategory(
+            List<com.midtone.backend.routine.domain.RoutineTask> tasks) {
+        return tasks.stream()
+                .collect(Collectors.groupingBy(com.midtone.backend.routine.domain.RoutineTask::getCategory,
+                        java.util.TreeMap::new, Collectors.toList()))
+                .entrySet().stream()
+                .map(entry -> toCategoryCompletion(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private static CategoryCompletion toCategoryCompletion(
+            String category, List<com.midtone.backend.routine.domain.RoutineTask> tasks) {
+        int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+        return new CategoryCompletion(category, tasks.size(), done, (double) done / tasks.size());
+    }
+
+    /** 완료율이 가장 낮은 분류. 기록이 없으면 지목할 대상도 없다. */
+    private static String weakestCategory(List<CategoryCompletion> byCategory) {
+        return byCategory.stream()
+                .min(java.util.Comparator.comparingDouble(CategoryCompletion::completionRate))
+                .map(CategoryCompletion::category)
+                .orElse(null);
+    }
+
+    /** 기간 안의 모든 날짜를 채워서 준다. 루틴이 없던 날도 그래프에서 빈칸으로 남지 않게 하려는 것이다. */
+    private static List<DailyCompletion> summarizeByDay(
+            List<com.midtone.backend.routine.domain.RoutineTask> tasks, LocalDate from, LocalDate to) {
+        java.util.Map<LocalDate, List<com.midtone.backend.routine.domain.RoutineTask>> tasksByDate = tasks.stream()
+                .collect(Collectors.groupingBy(com.midtone.backend.routine.domain.RoutineTask::getTaskDate));
+        List<DailyCompletion> byDay = new java.util.ArrayList<>();
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            List<com.midtone.backend.routine.domain.RoutineTask> dayTasks = tasksByDate.getOrDefault(date, List.of());
+            int done = (int) dayTasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+            byDay.add(new DailyCompletion(date, dayTasks.size(), done,
+                    dayTasks.isEmpty() ? 0.0 : (double) done / dayTasks.size()));
+        }
+        return byDay;
     }
 
     private TaskStatus parseStatus(String requestedStatus) {
@@ -131,7 +176,18 @@ public class RoutineService {
                                double completionRate, List<String> doneTitles, List<String> missedTitles) {
     }
 
-    public record RoutineReport(String period, LocalDate from, LocalDate to, double overallCompletionRate, Streak streak) {
+    /**
+     * @param weakestCategory 완료율이 가장 낮은 분류. 기록이 없으면 null이다.
+     */
+    public record RoutineReport(String period, LocalDate from, LocalDate to, double overallCompletionRate,
+                                List<CategoryCompletion> byCategory, String weakestCategory,
+                                List<DailyCompletion> byDay, Streak streak) {
+    }
+
+    public record CategoryCompletion(String category, int total, int done, double completionRate) {
+    }
+
+    public record DailyCompletion(LocalDate date, int total, int done, double completionRate) {
     }
 
     public record Streak(int currentStreak, int longestStreak, LocalDate lastCheckinDate) {

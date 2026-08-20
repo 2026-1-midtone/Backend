@@ -42,7 +42,8 @@ class HomeServiceTest {
         RoutineService.DailySummary summary =
                 new RoutineService.DailySummary(today, 6, 4, 1, 0.67, List.of(), List.of());
         RoutineService.RoutineReport report = new RoutineService.RoutineReport(
-                "7d", today.minusDays(6), today, 0.71, new RoutineService.Streak(12, 21, null));
+                "7d", today.minusDays(6), today, 0.71, List.of(), null, List.of(),
+                new RoutineService.Streak(12, 21, null));
         when(currentUserIdProvider.getCurrentUserId()).thenReturn(1L);
         when(homeScheduleSectionBuilder.build(eq(1L), any(LocalDate.class))).thenReturn(scheduleSection);
         when(homeCoachingSectionBuilder.build(any(LocalDate.class))).thenReturn(List.of());
