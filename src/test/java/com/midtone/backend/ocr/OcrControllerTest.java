@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.midtone.backend.ocr.application.ConfirmOcrJobResponse;
+import com.midtone.backend.ocr.application.CreateOcrDraftRequest;
 import com.midtone.backend.ocr.application.OcrDraftResponse;
 import com.midtone.backend.ocr.application.OcrException;
 import com.midtone.backend.ocr.application.OcrJobDetailResponse;
@@ -74,6 +75,28 @@ class OcrControllerTest {
                         .content("{\"shiftType\":\"NIGHT\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.shiftType").value("NIGHT"));
+    }
+
+    @Test
+    void 초안을_새로_추가하면_201을_반환한다() throws Exception {
+        given(ocrJobService.addDraft(eq(1L), any(CreateOcrDraftRequest.class)))
+                .willReturn(new OcrDraftResponse(
+                        7L, "2026-08-10", "NIGHT", "22:00", "07:00", BigDecimal.ONE, false));
+
+        mockMvc.perform(post("/api/v1/ocr/jobs/1/drafts")
+                        .contentType("application/json")
+                        .content("{\"workDate\":\"2026-08-10\",\"shiftType\":\"NIGHT\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.draftId").value(7))
+                .andExpect(jsonPath("$.workDate").value("2026-08-10"));
+    }
+
+    @Test
+    void 초안_추가_시_필수값이_빠지면_400을_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/ocr/jobs/1/drafts")
+                        .contentType("application/json")
+                        .content("{\"shiftType\":\"NIGHT\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
