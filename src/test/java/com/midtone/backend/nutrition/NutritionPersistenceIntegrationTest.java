@@ -34,4 +34,14 @@ class NutritionPersistenceIntegrationTest extends IntegrationTest {
         assertEquals(NutrientCode.VITAMIN_D,
                 needRepository.findByUserIdAndNutrientCode(user.getId(), NutrientCode.VITAMIN_D).orElseThrow().getNutrientCode());
     }
+
+    @Test
+    void V15_제품마다_구매_페이지_링크를_가진다() {
+        assertEquals("https://www.vivegen.co.kr/shop_view?idx=321",
+                productRepository.findByCode("DEEP_SLEEP_VISION").orElseThrow().getProductUrl());
+        assertEquals("https://www.vivegen.co.kr/skin/?idx=153",
+                productRepository.findByCode("VITAL_SKIN_SHOT").orElseThrow().getProductUrl());
+        assertEquals("https://www.vivegen.co.kr/energy/?idx=152",
+                productRepository.findByCode("REVIVE_ENERGY_SHOT").orElseThrow().getProductUrl());
+    }
 }

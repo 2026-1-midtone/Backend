@@ -48,7 +48,7 @@ class ChatSnapshotBuilderTest {
         NutritionRecommendationResponse recommendations = new NutritionRecommendationResponse(List.of(
                 new NutritionRecommendationResponse.Recommendation(3L, "REVIVE_ENERGY_SHOT", "바이브젠 리바이브 에너지 샷",
                         "VIVEGEN REVIVE ENERGY SHOT", "/images/products/revive_energy_shot.png",
-                        List.of("VITAMIN_D"), List.of(), "의약품이 아닙니다.")));
+                        "https://www.vivegen.co.kr/energy/?idx=152", List.of("VITAMIN_D"), List.of(), "의약품이 아닙니다.")));
         given(contextBuilder.build(1L, date)).willReturn("schedule");
         given(sleepCalculator.calculate(1L, date)).willReturn(new SleepPattern(null, null, null, null, 0, date, date));
         given(caffeineCalculator.calculate(1L, date)).willReturn(new DailyCaffeineStatus(date, 0, new BigDecimal("0.00"), false));
