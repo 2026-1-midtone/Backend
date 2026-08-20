@@ -36,8 +36,6 @@ public class CoachingCardGenerator {
     // 빛노출: Peak time(CBTmin)은 통상 습관적 기상시각의 1~2시간 전(한선정·주은연, 2008)이라는 임상 리뷰 근사치.
     private static final int CBT_MIN_BEFORE_WAKE_HOURS = 2;
 
-    private static final java.math.BigDecimal CAFFEINE_SERVING_LIMIT = new java.math.BigDecimal("2.00");
-
     public List<CoachingCardContent> generate(
             ShiftSchedule todayShift, CaffeineSensitivity caffeineSensitivity, int preferredNapMinutes) {
         return generate(todayShift, caffeineSensitivity, preferredNapMinutes, null, null);
@@ -135,9 +133,9 @@ public class CoachingCardGenerator {
                 .append("~")
                 .append(windowEnd.format(DateTimeDefaults.HOUR_MINUTE))
                 .append(" 사이 카페인 중단");
-        if (caffeineStatus != null && caffeineStatus.overServingLimit()) {
-            description.append(" · 오늘 카페인 ").append(caffeineStatus.totalServings())
-                    .append("잔으로 권장 상한(2잔)을 초과했어요");
+        if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
+            description.append(" · 오늘 카페인 ").append(caffeineStatus.totalAmountMg())
+                    .append("mg으로 일일 상한(").append(caffeineStatus.dailyLimitMg()).append("mg)을 초과했어요");
         }
 
         String anchorText = anchoredToHabitualBedtime
@@ -145,8 +143,9 @@ public class CoachingCardGenerator {
                 : "근무 종료 후 목표 취침 시각(" + targetBedtime.format(DateTimeDefaults.HOUR_MINUTE) + ")";
         String rationale = anchorText + "을 기준으로, 설정된 카페인 민감도(" + sensitivity
                 + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 창입니다.";
-        if (caffeineStatus != null && caffeineStatus.overServingLimit()) {
-            rationale += " 하루 2잔 초과 섭취는 수면의 질 저하와 관련된 국내 실측연구(김혜성·이종은, 2020) 근거가 있어 함께 안내했어요.";
+        if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
+            rationale += " 설정하신 일일 카페인 상한(" + caffeineStatus.dailyLimitMg()
+                    + "mg) 초과 섭취는 수면의 질 저하와 관련된 국내 실측연구(김혜성·이종은, 2020) 근거가 있어 함께 안내했어요.";
         }
         return new CoachingCardContent(CoachingCardType.CAFFEINE_CUTOFF, "카페인 컷오프", windowStart, windowEnd,
                 description.toString(), rationale);

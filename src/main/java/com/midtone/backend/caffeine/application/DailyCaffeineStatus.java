@@ -7,5 +7,6 @@ public record DailyCaffeineStatus(
         LocalDate date,
         int totalAmountMg,
         BigDecimal totalServings,
-        boolean overServingLimit) {
+        int dailyLimitMg,
+        boolean overDailyLimit) {
 }
