@@ -2,8 +2,6 @@ package com.midtone.backend.caffeine.application;
 
 import com.midtone.backend.caffeine.domain.CaffeineIntake;
 import com.midtone.backend.caffeine.domain.CaffeineIntakeRepository;
-import com.midtone.backend.user.domain.UserSettings;
-import com.midtone.backend.user.domain.UserSettingsRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,17 +11,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class CaffeineStatusCalculator {
 
-    // 사용자가 개인화 설정에서 일일 카페인 섭취량(mg)을 지정하지 않았을 때 쓰는 기본 상한.
-    // 화면의 "권장 입력 예시 200~400"의 상단값을 보수적인 기본값으로 사용한다.
-    private static final int DEFAULT_DAILY_LIMIT_MG = 400;
+    // 하루 300mg 이상 섭취 시 불안·불쾌감, 수면시간·수면효율 저하와 관련된다는 연구 근거
+    // (Lee, Yoo, Lee, Park, & Kim, 2007 — 김혜성·이종은, 2020에서 재인용)에 따른 상한.
+    private static final int DAILY_LIMIT_MG = 300;
 
     private final CaffeineIntakeRepository caffeineIntakeRepository;
-    private final UserSettingsRepository userSettingsRepository;
 
-    public CaffeineStatusCalculator(
-            CaffeineIntakeRepository caffeineIntakeRepository, UserSettingsRepository userSettingsRepository) {
+    public CaffeineStatusCalculator(CaffeineIntakeRepository caffeineIntakeRepository) {
         this.caffeineIntakeRepository = caffeineIntakeRepository;
-        this.userSettingsRepository = userSettingsRepository;
     }
 
     public DailyCaffeineStatus calculate(long userId, LocalDate date) {
@@ -32,24 +27,13 @@ public class CaffeineStatusCalculator {
                 .findByUserIdAndConsumedAtGreaterThanEqualAndConsumedAtLessThanOrderByConsumedAtAsc(
                         userId, date.atStartOfDay(), date.plusDays(1).atStartOfDay());
 
-        int totalAmountMg = intakes.stream().mapToInt(CaffeineIntake::getAmountMg).sum();
-        BigDecimal totalServings = intakes.stream()
-                .map(CaffeineIntake::getServings)
-                .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-        int dailyLimitMg = resolveDailyLimitMg(userId);
+        int totalAmountMg = CaffeineTotals.totalAmountMg(intakes);
+        BigDecimal totalServings = CaffeineTotals.totalServings(intakes);
 
         return new DailyCaffeineStatus(
                 date,
                 totalAmountMg,
                 totalServings,
-                dailyLimitMg,
-                totalAmountMg > dailyLimitMg);
-    }
-
-    private int resolveDailyLimitMg(long userId) {
-        return userSettingsRepository.findById(userId)
-                .map(UserSettings::getCaffeineDailyMg)
-                .filter(Objects::nonNull)
-                .orElse(DEFAULT_DAILY_LIMIT_MG);
+                totalAmountMg >= DAILY_LIMIT_MG);
     }
 }

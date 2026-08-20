@@ -1,6 +1,8 @@
 package com.midtone.backend.chat.application;
 
 import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
+import com.midtone.backend.caffeine.domain.CaffeineIntake;
+import com.midtone.backend.caffeine.domain.CaffeineIntakeRepository;
 import com.midtone.backend.coaching.domain.CoachingCardRepository;
 import com.midtone.backend.coaching.domain.DailyCoachingRepository;
 import com.midtone.backend.routine.domain.RoutineTaskRepository;
@@ -23,6 +25,7 @@ public class ChatSnapshotBuilder {
     private final CoachingCardRepository cardRepository;
     private final RoutineTaskRepository routineRepository;
     private final SleepLogRepository sleepLogRepository;
+    private final CaffeineIntakeRepository caffeineIntakeRepository;
     private final UserSettingsRepository settingsRepository;
     private final NutrientNeedService nutrientNeedService;
     private final NutritionRecommendationService nutritionRecommendationService;
@@ -30,13 +33,14 @@ public class ChatSnapshotBuilder {
     public ChatSnapshotBuilder(ChatContextBuilder scheduleBuilder, SleepPatternCalculator sleepCalculator,
             CaffeineStatusCalculator caffeineCalculator, DailyCoachingRepository dailyRepository,
             CoachingCardRepository cardRepository, RoutineTaskRepository routineRepository,
-            SleepLogRepository sleepLogRepository,
+            SleepLogRepository sleepLogRepository, CaffeineIntakeRepository caffeineIntakeRepository,
             UserSettingsRepository settingsRepository, NutrientNeedService nutrientNeedService,
             NutritionRecommendationService nutritionRecommendationService) {
         this.scheduleBuilder = scheduleBuilder; this.sleepCalculator = sleepCalculator;
         this.caffeineCalculator = caffeineCalculator; this.dailyRepository = dailyRepository;
         this.cardRepository = cardRepository; this.routineRepository = routineRepository;
         this.sleepLogRepository = sleepLogRepository;
+        this.caffeineIntakeRepository = caffeineIntakeRepository;
         this.settingsRepository = settingsRepository;
         this.nutrientNeedService = nutrientNeedService;
         this.nutritionRecommendationService = nutritionRecommendationService;
@@ -55,13 +59,15 @@ public class ChatSnapshotBuilder {
                 .orElse(null);
         return new ChatContextSnapshot(date, scheduleBuilder.build(userId, date), sleepCalculator.calculate(userId, date),
                 recentSleepLogs(userId, date),
-                caffeineCalculator.calculate(userId, date), sensitivity, cards,
+                caffeineCalculator.calculate(userId, date), recentCaffeineIntakes(userId, date), sensitivity, cards,
                 new ChatContextSnapshot.RoutineProgress(completed, tasks.size()),
                 nutrientNeedService.get(userId), nutritionRecommendationService.getRecommendations(userId));
     }
 
     private static final int RECENT_SLEEP_WINDOW_DAYS = 7;
     private static final int RECENT_SLEEP_MAX_LOGS = 5;
+    private static final int RECENT_CAFFEINE_WINDOW_DAYS = 7;
+    private static final int RECENT_CAFFEINE_MAX_LOGS = 5;
 
     private java.util.List<ChatContextSnapshot.RecentSleepLog> recentSleepLogs(long userId, LocalDate date) {
         java.util.List<SleepLog> logs = sleepLogRepository.findByUserIdAndWokeAtBetweenOrderByWokeAtAsc(
@@ -71,6 +77,17 @@ public class ChatSnapshotBuilder {
                 .map(log -> new ChatContextSnapshot.RecentSleepLog(
                         log.getSleptAt().toString(), log.getWokeAt().toString(),
                         java.time.Duration.between(log.getSleptAt(), log.getWokeAt()).toMinutes()))
+                .toList();
+    }
+
+    private java.util.List<ChatContextSnapshot.RecentCaffeineIntake> recentCaffeineIntakes(long userId, LocalDate date) {
+        java.util.List<CaffeineIntake> intakes = caffeineIntakeRepository.findByUserIdAndConsumedAtBetweenOrderByConsumedAtAsc(
+                userId, date.minusDays(RECENT_CAFFEINE_WINDOW_DAYS).atStartOfDay(), date.plusDays(1).atStartOfDay());
+        return intakes.reversed().stream()
+                .limit(RECENT_CAFFEINE_MAX_LOGS)
+                .map(intake -> new ChatContextSnapshot.RecentCaffeineIntake(
+                        intake.getConsumedAt().toString(), intake.getAmountMg(), intake.getServings(),
+                        intake.getBeverageType()))
                 .toList();
     }
 }

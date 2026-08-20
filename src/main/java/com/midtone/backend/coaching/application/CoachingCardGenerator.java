@@ -135,7 +135,7 @@ public class CoachingCardGenerator {
                 .append(" 사이 카페인 중단");
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
             description.append(" · 오늘 카페인 ").append(caffeineStatus.totalAmountMg())
-                    .append("mg으로 일일 상한(").append(caffeineStatus.dailyLimitMg()).append("mg)을 초과했어요");
+                    .append("mg으로 일일 권장 상한(300mg)을 초과했어요");
         }
 
         String anchorText = anchoredToHabitualBedtime
@@ -144,8 +144,8 @@ public class CoachingCardGenerator {
         String rationale = anchorText + "을 기준으로, 설정된 카페인 민감도(" + sensitivity
                 + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 창입니다.";
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
-            rationale += " 설정하신 일일 카페인 상한(" + caffeineStatus.dailyLimitMg()
-                    + "mg) 초과 섭취는 수면의 질 저하와 관련된 국내 실측연구(김혜성·이종은, 2020) 근거가 있어 함께 안내했어요.";
+            rationale += " 하루 300mg 이상 섭취는 불안·불쾌감을 유발하고 수면시간·수면효율에 영향을 준다는 "
+                    + "국내 연구(Lee 등, 2007) 근거가 있어 함께 안내했어요.";
         }
         return new CoachingCardContent(CoachingCardType.CAFFEINE_CUTOFF, "카페인 컷오프", windowStart, windowEnd,
                 description.toString(), rationale);
