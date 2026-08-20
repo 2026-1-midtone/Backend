@@ -31,13 +31,16 @@ class RoutineControllerTest {
         LocalDate date = LocalDate.of(2026, 8, 7);
         given(routineService.getRoutines(date)).willReturn(new RoutineService.DailyRoutine(
                 date,
-                List.of(new RoutineService.RoutineTaskResponse(901L, "COACHING", 303L, "NAP", "20분 파워냅", "근무 전 휴식", "PENDING")),
+                List.of(new RoutineService.RoutineTaskResponse(901L, "COACHING", 303L, "NAP", "20분 파워냅", "근무 전 휴식",
+                        "2026-08-07T13:00+09:00", "2026-08-07T13:20+09:00", "PENDING")),
                 new RoutineService.Progress(1, 0, 0, 0.0)));
 
         mockMvc.perform(get("/api/v1/routines").param("date", "2026-08-07"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.taskDate").value("2026-08-07"))
                 .andExpect(jsonPath("$.tasks[0].taskId").value(901))
+                .andExpect(jsonPath("$.tasks[0].windowStart").value("2026-08-07T13:00+09:00"))
+                .andExpect(jsonPath("$.tasks[0].windowEnd").value("2026-08-07T13:20+09:00"))
                 .andExpect(jsonPath("$.progress.total").value(1));
     }
 

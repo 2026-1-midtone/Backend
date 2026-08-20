@@ -8,17 +8,22 @@ import com.midtone.backend.ocr.domain.OcrJob;
 import com.midtone.backend.ocr.domain.OcrJobRepository;
 import com.midtone.backend.ocr.domain.OcrJobStatus;
 import com.midtone.backend.shift.application.schedule.ShiftCoachingRegenerationTrigger;
+import com.midtone.backend.shift.application.schedule.ShiftTimeDefaultService;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,12 +34,15 @@ public class OcrJobService {
 
     private static final Set<String> SUPPORTED_MIME_TYPES = Set.of("image/jpeg", "image/png");
     private static final long MAX_IMAGE_BYTES = 10L * 1024 * 1024;
+    // 사람이 직접 넣은 초안은 같은 날짜의 인식 결과보다 항상 우선한다.
+    private static final BigDecimal MANUAL_DRAFT_CONFIDENCE = BigDecimal.ONE;
 
     private final OcrJobRepository ocrJobRepository;
     private final OcrDraftShiftRepository ocrDraftShiftRepository;
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final OcrProcessingWorker ocrProcessingWorker;
     private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    private final ShiftTimeDefaultService shiftTimeDefaultService;
     private final CurrentUserIdProvider currentUserIdProvider;
 
     public OcrJobService(
@@ -43,12 +51,14 @@ public class OcrJobService {
             ShiftScheduleRepository shiftScheduleRepository,
             OcrProcessingWorker ocrProcessingWorker,
             ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger,
+            ShiftTimeDefaultService shiftTimeDefaultService,
             CurrentUserIdProvider currentUserIdProvider) {
         this.ocrJobRepository = ocrJobRepository;
         this.ocrDraftShiftRepository = ocrDraftShiftRepository;
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.ocrProcessingWorker = ocrProcessingWorker;
         this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
+        this.shiftTimeDefaultService = shiftTimeDefaultService;
         this.currentUserIdProvider = currentUserIdProvider;
     }
 
@@ -88,19 +98,39 @@ public class OcrJobService {
         return OcrDraftResponse.from(draft);
     }
 
+    /**
+     * OCR 이 놓친 날짜의 초안을 직접 추가한다. 근무 유형이 아닌 배지가 붙은 칸은 초안이 생기지 않아
+     * 수정할 대상 자체가 없으므로, 검수 화면에서 확정 전에 채워 넣을 수 있게 한다.
+     * 사람이 직접 입력한 값이므로 신뢰도는 최대값으로 두어 같은 날짜의 인식 결과보다 우선하게 한다.
+     */
+    @Transactional
+    public OcrDraftResponse addDraft(Long jobId, CreateOcrDraftRequest request) {
+        OcrJob job = findOwnedJob(jobId);
+        requireCompleted(job);
+        LocalDate workDate = LocalDate.parse(request.workDate());
+        if (!YearMonth.from(workDate).equals(YearMonth.parse(job.getTargetMonth()))) {
+            throw new OcrException(OcrException.ErrorCode.DRAFT_DATE_OUT_OF_MONTH);
+        }
+        OcrDraftShift draft = new OcrDraftShift(
+                jobId, workDate, ShiftType.valueOf(request.shiftType()), MANUAL_DRAFT_CONFIDENCE,
+                request.startTime() == null ? null : LocalTime.parse(request.startTime()),
+                request.endTime() == null ? null : LocalTime.parse(request.endTime()));
+        return OcrDraftResponse.from(ocrDraftShiftRepository.save(draft));
+    }
+
     @Transactional
     public ConfirmOcrJobResponse confirm(Long jobId) {
         OcrJob job = findOwnedJob(jobId);
         requireCompleted(job);
         long userId = job.getUserId();
-        List<OcrDraftShift> drafts = ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(jobId).stream()
+        List<OcrDraftShift> candidates = ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(jobId).stream()
                 .filter(draft -> !draft.isExcluded())
                 .toList();
-        if (drafts.stream().map(OcrDraftShift::getWorkDate).distinct().count() != drafts.size()) {
-            throw new OcrException(OcrException.ErrorCode.DRAFT_DATE_CONFLICT);
-        }
+        List<String> skippedDates = new ArrayList<>();
+        List<OcrDraftShift> drafts = keepBestDraftPerDate(candidates, skippedDates);
         List<String> replacedDates = new ArrayList<>();
         List<ShiftSchedule> newShifts = new ArrayList<>();
+        Map<ShiftType, ShiftTime> defaultTimes = new EnumMap<>(ShiftType.class);
         for (OcrDraftShift draft : drafts) {
             shiftScheduleRepository.findByUserIdAndWorkDate(userId, draft.getWorkDate()).ifPresent(existing -> {
                 shiftScheduleRepository.delete(existing);
@@ -108,7 +138,7 @@ public class OcrJobService {
             });
             newShifts.add(ShiftSchedule.fromOcr(
                     userId, draft.getWorkDate(), draft.getShiftType(),
-                    new ShiftTime(draft.getStartTime(), draft.getEndTime()), draft.getConfidence()));
+                    resolveShiftTime(userId, draft, defaultTimes), draft.getConfidence()));
         }
         shiftScheduleRepository.flush();
         shiftScheduleRepository.saveAll(newShifts);
@@ -119,7 +149,23 @@ public class OcrJobService {
         }
         job.markConfirmed();
         ocrJobRepository.save(job);
-        return new ConfirmOcrJobResponse(newShifts.size(), replacedDates, affectedCoachingDates);
+        return new ConfirmOcrJobResponse(newShifts.size(), replacedDates, affectedCoachingDates, skippedDates);
+    }
+
+    /**
+     * 근무표에서 시각을 못 읽어낸 초안은 사용자가 정한 근무 유형별 기본 시각으로 채운다.
+     * 시각이 비어 있으면 코칭 카드·다음 근무·야간 영양 타이밍이 계산되지 않기 때문이다.
+     * 유형별 기본값은 확정 한 번에 유형당 한 번만 읽는다.
+     */
+    private ShiftTime resolveShiftTime(long userId, OcrDraftShift draft, Map<ShiftType, ShiftTime> defaultTimes) {
+        if (draft.getStartTime() != null && draft.getEndTime() != null) {
+            return new ShiftTime(draft.getStartTime(), draft.getEndTime());
+        }
+        ShiftTime fallback = defaultTimes.computeIfAbsent(
+                draft.getShiftType(), shiftType -> shiftTimeDefaultService.resolve(userId, shiftType));
+        return new ShiftTime(
+                draft.getStartTime() != null ? draft.getStartTime() : fallback.startTime(),
+                draft.getEndTime() != null ? draft.getEndTime() : fallback.endTime());
     }
 
     @Transactional
@@ -130,6 +176,30 @@ public class OcrJobService {
         }
         ocrProcessingWorker.processAsync(jobId);
         return new OcrJobResponse(jobId, OcrJobStatus.PROCESSING.name());
+    }
+
+    /**
+     * 근무표는 하루에 한 건만 저장할 수 있으므로(uk_shift_schedules_user_date), 같은 날짜에 초안이 여러 개
+     * 남아 있으면 신뢰도가 가장 높은 하나만 남긴다. 신뢰도가 같으면 먼저 인식된 초안을 쓴다.
+     * 이때 밀려난 날짜는 skippedDates 로 알려 사용자가 검수 화면에서 바로잡을 수 있게 한다.
+     */
+    private List<OcrDraftShift> keepBestDraftPerDate(List<OcrDraftShift> candidates, List<String> skippedDates) {
+        Map<LocalDate, OcrDraftShift> bestByDate = new LinkedHashMap<>();
+        for (OcrDraftShift draft : candidates) {
+            OcrDraftShift previous = bestByDate.putIfAbsent(draft.getWorkDate(), draft);
+            if (previous == null) {
+                continue;
+            }
+            skippedDates.add(draft.getWorkDate().toString());
+            if (confidenceOf(draft).compareTo(confidenceOf(previous)) > 0) {
+                bestByDate.put(draft.getWorkDate(), draft);
+            }
+        }
+        return List.copyOf(bestByDate.values());
+    }
+
+    private BigDecimal confidenceOf(OcrDraftShift draft) {
+        return draft.getConfidence() == null ? BigDecimal.ZERO : draft.getConfidence();
     }
 
     private OcrJob findOwnedJob(Long jobId) {
