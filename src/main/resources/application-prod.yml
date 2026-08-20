@@ -1,0 +1,5 @@
+spring:
+  sql:
+    init:
+      # 스키마와 데이터는 Flyway 마이그레이션으로만 관리한다.
+      mode: never
