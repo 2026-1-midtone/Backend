@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.midtone.backend.global.time.DateTimeDefaults;
 import com.midtone.backend.shift.application.schedule.CompletenessResponse;
+import com.midtone.backend.shift.application.schedule.NextShiftFinder;
 import com.midtone.backend.shift.application.schedule.ShiftCompletenessCalculator;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
@@ -158,8 +159,10 @@ class HomeScheduleSectionBuilderTest {
     }
 
     private HomeScheduleSectionBuilder builderAt(LocalDateTime now) {
+        Clock clock = Clock.fixed(
+                now.atZone(DateTimeDefaults.DEFAULT_ZONE).toInstant(), DateTimeDefaults.DEFAULT_ZONE);
         return new HomeScheduleSectionBuilder(shiftScheduleRepository, transitionDetector, shiftCompletenessCalculator,
-                Clock.fixed(now.atZone(DateTimeDefaults.DEFAULT_ZONE).toInstant(), DateTimeDefaults.DEFAULT_ZONE));
+                new NextShiftFinder(shiftScheduleRepository, clock), clock);
     }
 
     private void stubSufficientSchedule() {

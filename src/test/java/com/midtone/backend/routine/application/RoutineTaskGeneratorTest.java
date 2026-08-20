@@ -13,10 +13,13 @@ import com.midtone.backend.routine.domain.RoutineTask;
 import com.midtone.backend.routine.domain.RoutineTaskRepository;
 import com.midtone.backend.routine.domain.TaskStatus;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
+import com.midtone.backend.shift.domain.ShiftSchedule;
+import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import com.midtone.backend.transition.application.TransitionProtocolCatalog;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RoutineTaskGeneratorTest {
 
     private static final LocalDate DATE = LocalDate.of(2026, 8, 10);
+    private static final int BASELINE_TASK_COUNT = 5;
 
     @Mock
     private RoutineTaskRepository routineTaskRepository;
@@ -38,7 +42,13 @@ class RoutineTaskGeneratorTest {
     private TransitionDetector transitionDetector;
 
     private RoutineTaskGenerator generator() {
-        return new RoutineTaskGenerator(routineTaskRepository, transitionDetector, new TransitionProtocolCatalog());
+        return new RoutineTaskGenerator(
+                routineTaskRepository, transitionDetector, new TransitionProtocolCatalog(),
+                new BaselineRoutineCatalog());
+    }
+
+    private static ShiftSchedule shift(ShiftType shiftType, LocalTime startTime, LocalTime endTime) {
+        return new ShiftSchedule(1L, DATE, shiftType, new ShiftTime(startTime, endTime));
     }
 
     @Test
@@ -53,7 +63,8 @@ class RoutineTaskGeneratorTest {
         ReflectionTestUtils.setField(card, "id", 10L);
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.DAY)).thenReturn(Optional.empty());
 
-        generator().regenerate(1L, DATE, ShiftType.DAY, null, List.of(card));
+        generator().regenerate(
+                1L, DATE, shift(ShiftType.DAY, LocalTime.of(9, 0), LocalTime.of(18, 0)), List.of(card));
 
         ArgumentCaptor<List<RoutineTask>> captor = ArgumentCaptor.captor();
         InOrder order = inOrder(routineTaskRepository);
@@ -61,7 +72,7 @@ class RoutineTaskGeneratorTest {
                 eq(1L), eq(DATE), anyCollection());
         order.verify(routineTaskRepository).saveAll(captor.capture());
         List<RoutineTask> tasks = captor.getValue();
-        assertEquals(1, tasks.size());
+        assertEquals(1 + BASELINE_TASK_COUNT, tasks.size());
         RoutineTask task = tasks.get(0);
         assertEquals(1L, task.getUserId());
         assertEquals(DATE, task.getTaskDate());
@@ -80,13 +91,14 @@ class RoutineTaskGeneratorTest {
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.DAY))
                 .thenReturn(Optional.of(new TransitionDetector.TransitionInfo(ShiftType.NIGHT, ShiftType.DAY)));
 
-        generator().regenerate(1L, DATE, ShiftType.DAY, null, List.of());
+        generator().regenerate(
+                1L, DATE, shift(ShiftType.DAY, LocalTime.of(9, 0), LocalTime.of(18, 0)), List.of());
 
         ArgumentCaptor<List<RoutineTask>> captor = ArgumentCaptor.captor();
         org.mockito.Mockito.verify(routineTaskRepository).saveAll(captor.capture());
         List<RoutineTask> tasks = captor.getValue();
-        assertEquals(3, tasks.size());
-        RoutineTask sleepTask = tasks.get(2);
+        assertEquals(BASELINE_TASK_COUNT + 3, tasks.size());
+        RoutineTask sleepTask = tasks.get(tasks.size() - 1);
         assertEquals("TRANSITION", sleepTask.getSourceType());
         assertNull(sleepTask.getSourceId());
         assertEquals("SLEEP", sleepTask.getCategory());
@@ -96,13 +108,22 @@ class RoutineTaskGeneratorTest {
     }
 
     @Test
-    void 코칭_카드와_전환_단계가_없으면_저장하지_않는다() {
+    void 오프_날에도_기본_루틴을_만든다() {
         when(transitionDetector.detectTransition(1L, DATE, ShiftType.OFF)).thenReturn(Optional.empty());
 
-        generator().regenerate(1L, DATE, ShiftType.OFF, null, List.of());
+        generator().regenerate(1L, DATE, shift(ShiftType.OFF, null, null), List.of());
 
+        ArgumentCaptor<List<RoutineTask>> captor = ArgumentCaptor.captor();
         org.mockito.Mockito.verify(routineTaskRepository)
                 .deleteAllByUserIdAndTaskDateAndSourceTypeIn(eq(1L), eq(DATE), anyCollection());
-        org.mockito.Mockito.verify(routineTaskRepository, org.mockito.Mockito.never()).saveAll(anyCollection());
+        org.mockito.Mockito.verify(routineTaskRepository).saveAll(captor.capture());
+        List<RoutineTask> tasks = captor.getValue();
+        assertEquals(BASELINE_TASK_COUNT, tasks.size());
+        RoutineTask wakeTask = tasks.get(0);
+        assertEquals("BASELINE", wakeTask.getSourceType());
+        assertNull(wakeTask.getSourceId());
+        assertEquals("WAKE", wakeTask.getCategory());
+        assertEquals(LocalDateTime.of(2026, 8, 10, 8, 0), wakeTask.getWindowStart());
+        assertEquals(TaskStatus.PENDING, wakeTask.getStatus());
     }
 }

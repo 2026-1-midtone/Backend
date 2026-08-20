@@ -208,6 +208,8 @@ class ShiftServiceTest {
         when(shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
                         1L, LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 14)))
                 .thenReturn(List.of(shift1, shift2));
+        when(shiftTimeDefaultService.resolve(1L, ShiftType.NIGHT))
+                .thenReturn(new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
         when(shiftCoachingRegenerationTrigger.triggerForRange(LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 14)))
                 .thenReturn(List.of("2026-08-10", "2026-08-11"));
 
@@ -216,6 +218,7 @@ class ShiftServiceTest {
         assertEquals(2, response.updatedCount());
         assertEquals(ShiftType.NIGHT, shift1.getShiftType());
         assertEquals(ShiftType.NIGHT, shift2.getShiftType());
+        assertEquals(LocalTime.of(22, 0), shift1.getStartTime());
         assertEquals(List.of("2026-08-10", "2026-08-11"), response.affectedCoachingDates());
     }
 

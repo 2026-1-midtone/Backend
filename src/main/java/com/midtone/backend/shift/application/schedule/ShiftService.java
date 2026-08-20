@@ -89,7 +89,10 @@ public class ShiftService {
         long userId = currentUserIdProvider.getCurrentUserId();
         List<ShiftSchedule> shifts =
                 shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, from, to);
-        shifts.forEach(shift -> shift.update(shiftType, null, null));
+        // 유형이 통째로 바뀌므로 시각도 새 유형 기준으로 덮어쓴다.
+        // 이전 유형의 시각이 남으면 코칭 카드가 엉뚱한 시간대로 계산된다.
+        ShiftTime shiftTime = shiftTimeDefaultService.resolve(userId, shiftType);
+        shifts.forEach(shift -> shift.changeType(shiftType, shiftTime));
         List<String> affectedCoachingDates = shiftCoachingRegenerationTrigger.triggerForRange(from, to);
         return new BulkUpdateShiftResponse(shifts.size(), affectedCoachingDates);
     }

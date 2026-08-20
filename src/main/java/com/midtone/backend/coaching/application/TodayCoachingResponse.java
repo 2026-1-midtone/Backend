@@ -17,13 +17,19 @@ public record TodayCoachingResponse(
 
     private static final String DISCLAIMER = "본 코칭은 참고용이며 의학적 진단·치료를 대체하지 않습니다.";
 
-    public static TodayCoachingResponse of(DailyCoaching dailyCoaching, List<CoachingCard> cards) {
+    /**
+     * 다음 근무 시작 시각은 저장된 값이 아니라 조회 시점에 다시 계산한 값을 쓴다.
+     * 코칭은 날짜당 한 번만 만들어 두고 재사용하기 때문에, 그 뒤 근무표가 바뀌면
+     * 저장된 값이 그대로 남아 홈 화면의 카운트다운과 어긋난다.
+     */
+    public static TodayCoachingResponse of(
+            DailyCoaching dailyCoaching, List<CoachingCard> cards, LocalDateTime nextShiftStartAt) {
         List<Card> cardResponses = cards.stream().map(Card::from).toList();
         return new TodayCoachingResponse(
                 dailyCoaching.getId(),
                 dailyCoaching.getCoachingDate().toString(),
                 dailyCoaching.getTodayShiftType().name(),
-                format(dailyCoaching.getNextShiftStartAt()),
+                format(nextShiftStartAt),
                 dailyCoaching.isTransitionDay(),
                 cardResponses,
                 DISCLAIMER);

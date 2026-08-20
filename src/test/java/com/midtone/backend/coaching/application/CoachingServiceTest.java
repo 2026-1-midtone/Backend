@@ -13,6 +13,7 @@ import com.midtone.backend.coaching.domain.CoachingCardType;
 import com.midtone.backend.coaching.domain.DailyCoaching;
 import com.midtone.backend.coaching.domain.DailyCoachingRepository;
 import com.midtone.backend.global.user.CurrentUserIdProvider;
+import com.midtone.backend.shift.application.schedule.NextShiftFinder;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
@@ -43,6 +44,8 @@ class CoachingServiceTest {
 
     @Mock
     private com.midtone.backend.routine.application.RoutineTaskGenerator routineTaskGenerator;
+    @Mock
+    private NextShiftFinder nextShiftFinder;
 
     @InjectMocks
     private CoachingService coachingService;
@@ -83,8 +86,7 @@ class CoachingServiceTest {
         verify(routineTaskGenerator).regenerate(
                 org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.eq(date),
-                org.mockito.ArgumentMatchers.eq(ShiftType.NIGHT),
-                org.mockito.ArgumentMatchers.eq(LocalTime.of(22, 0)),
+                org.mockito.ArgumentMatchers.same(shift),
                 org.mockito.ArgumentMatchers.anyList());
     }
 

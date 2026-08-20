@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
 import com.midtone.backend.caffeine.application.DailyCaffeineStatus;
 import com.midtone.backend.global.time.DateTimeDefaults;
+import com.midtone.backend.shift.application.schedule.NextShiftFinder;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
@@ -100,10 +101,12 @@ class DailyCoachingGeneratorTest {
     }
 
     private GeneratedCoaching generateAt(LocalDateTime now) {
+        Clock clock = Clock.fixed(
+                now.atZone(DateTimeDefaults.DEFAULT_ZONE).toInstant(), DateTimeDefaults.DEFAULT_ZONE);
         DailyCoachingGenerator generator = new DailyCoachingGenerator(
                 shiftScheduleRepository, userSettingsRepository, transitionDetector, coachingCardGenerator,
                 sleepPatternCalculator, caffeineStatusCalculator,
-                Clock.fixed(now.atZone(DateTimeDefaults.DEFAULT_ZONE).toInstant(), DateTimeDefaults.DEFAULT_ZONE));
+                new NextShiftFinder(shiftScheduleRepository, clock));
         return generator.generate(1L, DATE).orElseThrow();
     }
 

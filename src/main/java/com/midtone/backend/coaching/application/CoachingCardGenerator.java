@@ -47,6 +47,9 @@ public class CoachingCardGenerator {
     private static final LocalTime IDEAL_NAP_WINDOW_END = LocalTime.of(16, 0);
     private static final Duration IDEAL_NAP_MIN_BUFFER_BEFORE_SHIFT = Duration.ofHours(1);
 
+    // 수면기록이 없을 때 쓰는 목표 취침시각.
+    private static final LocalTime DEFAULT_BEDTIME = LocalTime.of(23, 0);
+
     // 빛노출: Peak time(CBTmin)은 통상 습관적 기상시각의 1~2시간 전(한선정·주은연, 2008)이라는 임상 리뷰 근사치.
     private static final int CBT_MIN_BEFORE_WAKE_HOURS = 2;
 
@@ -205,8 +208,8 @@ public class CoachingCardGenerator {
                 + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 컷오프 시각입니다. 이 시각 이후로는 취침 전까지 계속 카페인을 피하는 것이 좋습니다.";
         if (!anchoredToHabitualBedtime) {
             // 오늘과 같은 근무 유형 뒤 수면 기록이 부족해(SleepPatternCalculator) 습관적 취침시각을 못 구하고,
-            // 근무 종료 시각을 취침시각으로 대략 가정해 계산했다는 걸 밝힌다.
-            rationale += " 아직 이 근무 유형 뒤 수면 기록이 부족해 근무 종료 시각을 취침시각으로 대략 가정해 계산했어요. "
+            // 일반적인 취침시각으로 대략 가정해 계산했다는 걸 밝힌다.
+            rationale += " 아직 이 근무 유형 뒤 수면 기록이 부족해 근무 종료 이후 일반적인 취침시각을 가정해 계산했어요. "
                     + "수면 기록을 더 남겨주시면 실제 취침시각 기준으로 더 정확하게 계산돼요.";
         }
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
@@ -217,12 +220,23 @@ public class CoachingCardGenerator {
                 description.toString(), rationale);
     }
 
+    /**
+     * 수면기록이 없으면 근무 종료 시각에서 가장 가까운 일반 취침시각(23시)을 목표로 삼되,
+     * 근무 종료보다 이르게 잡히지는 않게 한다.
+     * 근무 종료 시각을 그대로 취침시각으로 보면 18시에 끝나는 데이 근무가 "18시 취침"으로 계산돼
+     * 카페인 컷오프가 한낮으로 나온다. 반대로 새벽에 끝나는 야간 근무는 이 하한이 걸려
+     * 퇴근 직후 취침으로 자연스럽게 계산된다.
+     */
     private LocalDateTime resolveTargetBedtime(LocalDate workDate, LocalDateTime shiftEnd, SleepPattern sleepPattern) {
+        LocalDateTime reference = shiftEnd != null ? shiftEnd : workDate.atTime(DEFAULT_BEDTIME);
         if (hasHabitualBedtime(sleepPattern)) {
-            LocalDateTime reference = shiftEnd != null ? shiftEnd : workDate.atTime(12, 0);
             return nearestOccurrence(reference, sleepPattern.habitualBedtime());
         }
-        return shiftEnd;
+        if (shiftEnd == null) {
+            return reference;
+        }
+        LocalDateTime bedtime = nearestOccurrence(shiftEnd, DEFAULT_BEDTIME);
+        return bedtime.isBefore(shiftEnd) ? shiftEnd : bedtime;
     }
 
     /**

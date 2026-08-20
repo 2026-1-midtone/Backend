@@ -3,16 +3,15 @@ package com.midtone.backend.coaching.application;
 import com.midtone.backend.caffeine.application.CaffeineStatusCalculator;
 import com.midtone.backend.caffeine.application.DailyCaffeineStatus;
 import com.midtone.backend.coaching.domain.CoachingCard.CoachingCardContent;
+import com.midtone.backend.shift.application.schedule.NextShiftFinder;
 import com.midtone.backend.shift.application.schedule.TransitionDetector;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
-import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.sleep.application.SleepPattern;
 import com.midtone.backend.sleep.application.SleepPatternCalculator;
 import com.midtone.backend.user.domain.CaffeineSensitivity;
 import com.midtone.backend.user.domain.UserSettings;
 import com.midtone.backend.user.domain.UserSettingsRepository;
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +29,7 @@ public class DailyCoachingGenerator {
     private final CoachingCardGenerator coachingCardGenerator;
     private final SleepPatternCalculator sleepPatternCalculator;
     private final CaffeineStatusCalculator caffeineStatusCalculator;
-    private final Clock clock;
+    private final NextShiftFinder nextShiftFinder;
 
     public DailyCoachingGenerator(
             ShiftScheduleRepository shiftScheduleRepository,
@@ -39,14 +38,14 @@ public class DailyCoachingGenerator {
             CoachingCardGenerator coachingCardGenerator,
             SleepPatternCalculator sleepPatternCalculator,
             CaffeineStatusCalculator caffeineStatusCalculator,
-            Clock clock) {
+            NextShiftFinder nextShiftFinder) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.userSettingsRepository = userSettingsRepository;
         this.transitionDetector = transitionDetector;
         this.coachingCardGenerator = coachingCardGenerator;
         this.sleepPatternCalculator = sleepPatternCalculator;
         this.caffeineStatusCalculator = caffeineStatusCalculator;
-        this.clock = clock;
+        this.nextShiftFinder = nextShiftFinder;
     }
 
     public Optional<GeneratedCoaching> generate(long userId, LocalDate date) {
@@ -55,7 +54,7 @@ public class DailyCoachingGenerator {
     }
 
     private GeneratedCoaching buildGeneratedCoaching(long userId, LocalDate date, ShiftSchedule todayShift) {
-        LocalDateTime nextShiftStartAt = findNextShiftStartAt(userId, date);
+        LocalDateTime nextShiftStartAt = nextShiftFinder.findStartAt(userId, date);
         UserSettings settings = userSettingsRepository.findById(userId).orElse(null);
         CaffeineSensitivity sensitivity = sensitivityOf(settings);
         int preferredNapMinutes = napMinutesOf(settings);
@@ -66,23 +65,6 @@ public class DailyCoachingGenerator {
         List<CoachingCardContent> cards = coachingCardGenerator.generate(
                 todayShift, sensitivity, preferredNapMinutes, sleepPattern, caffeineStatus);
         return new GeneratedCoaching(todayShift, nextShiftStartAt, transitionDay, sensitivity, cards);
-    }
-
-    /**
-     * 아직 시작하지 않은 가장 가까운 근무의 시작 시각. 그날 근무도 시작 전이면 후보에 넣는다.
-     * 저녁 출근을 앞둔 아침에 코칭 화면의 "다음 근무까지"가 비어 보이면 안 되기 때문이다.
-     */
-    private LocalDateTime findNextShiftStartAt(long userId, LocalDate date) {
-        LocalDateTime now = LocalDateTime.now(clock);
-        LocalDate searchTo = date.plusDays(ShiftScheduleWindow.SCAN_DAYS);
-        List<ShiftSchedule> upcoming = shiftScheduleRepository
-                .findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(userId, date, searchTo);
-        return upcoming.stream()
-                .filter(shift -> shift.getStartTime() != null)
-                .map(shift -> shift.getWorkDate().atTime(shift.getStartTime()))
-                .filter(startAt -> startAt.isAfter(now))
-                .findFirst()
-                .orElse(null);
     }
 
     private CaffeineSensitivity sensitivityOf(UserSettings settings) {
