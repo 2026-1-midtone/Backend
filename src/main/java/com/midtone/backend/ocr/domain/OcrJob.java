@@ -56,6 +56,10 @@ public class OcrJob {
         this.status = OcrJobStatus.PENDING;
     }
 
+    public void retarget(String targetMonth) {
+        this.targetMonth = targetMonth;
+    }
+
     public void markProcessing() {
         this.status = OcrJobStatus.PROCESSING;
         this.errorMessage = null;

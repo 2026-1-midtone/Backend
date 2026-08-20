@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RoutineService {
@@ -37,6 +38,7 @@ public class RoutineService {
         return new DailyRoutine(date, mappedTasks, new Progress(total, done, skipped, completionRate));
     }
 
+    @Transactional
     public UpdatedTask updateTaskStatus(long taskId, String requestedStatus) {
         TaskStatus status = parseStatus(requestedStatus);
         com.midtone.backend.routine.domain.RoutineTask task = routineTaskRepository.findById(taskId)

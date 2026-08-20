@@ -56,11 +56,14 @@ public class OcrProcessingWorker {
         ocrJobRepository.save(job);
         try {
             JsonNode document = documentAiClient.process(job.getImage(), job.getImageMime());
-            List<OcrDraftParser.ParsedDraft> parsed =
-                    ocrDraftParser.parse(document, YearMonth.parse(job.getTargetMonth()));
+            // 업로드 요청의 month 는 프론트 기본값이 현재 월이라 과거 월 근무표에서 어긋난다.
+            // 이미지 상단에 연월이 적혀 있으면 그쪽이 사실이므로 대상 월을 이미지 기준으로 다시 잡는다.
+            YearMonth targetMonth =
+                    ocrDraftParser.resolveMonth(document, YearMonth.parse(job.getTargetMonth()));
+            job.retarget(targetMonth.toString());
+            List<OcrDraftParser.ParsedDraft> parsed = ocrDraftParser.parse(document, targetMonth);
             if (parsed.isEmpty()) {
-                parsed = ocrFallbackExtractor.extract(
-                        job.getImage(), job.getImageMime(), YearMonth.parse(job.getTargetMonth()));
+                parsed = ocrFallbackExtractor.extract(job.getImage(), job.getImageMime(), targetMonth);
             }
             if (parsed.isEmpty()) {
                 job.markFailed(UNRECOGNIZED_MESSAGE);
