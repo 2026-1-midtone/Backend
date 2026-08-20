@@ -8,6 +8,7 @@ import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftScheduleWindow;
 import com.midtone.backend.shift.domain.ShiftType;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,14 +27,17 @@ public class HomeScheduleSectionBuilder {
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final TransitionDetector transitionDetector;
     private final ShiftCompletenessCalculator shiftCompletenessCalculator;
+    private final Clock clock;
 
     public HomeScheduleSectionBuilder(
             ShiftScheduleRepository shiftScheduleRepository,
             TransitionDetector transitionDetector,
-            ShiftCompletenessCalculator shiftCompletenessCalculator) {
+            ShiftCompletenessCalculator shiftCompletenessCalculator,
+            Clock clock) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.transitionDetector = transitionDetector;
         this.shiftCompletenessCalculator = shiftCompletenessCalculator;
+        this.clock = clock;
     }
 
     public ScheduleSection build(long userId, LocalDate date) {
@@ -56,11 +60,17 @@ public class HomeScheduleSectionBuilder {
                 shift.getShiftType().name(), formatTime(shift.getStartTime()), formatTime(shift.getEndTime()));
     }
 
+    /**
+     * 아직 시작하지 않은 가장 가까운 근무. 오늘 근무도 시작 전이면 후보에 넣는다.
+     * 저녁 출근을 앞둔 아침에 "다음 근무"가 비어 보이면 안 되기 때문이다.
+     */
     private HomeDashboardResponse.NextShift findNextShift(long userId, LocalDate date) {
+        LocalDateTime now = LocalDateTime.now(clock);
         List<ShiftSchedule> upcoming = shiftScheduleRepository.findByUserIdAndWorkDateBetweenOrderByWorkDateAsc(
-                userId, date.plusDays(1), date.plusDays(ShiftScheduleWindow.SCAN_DAYS));
+                userId, date, date.plusDays(ShiftScheduleWindow.SCAN_DAYS));
         return upcoming.stream()
                 .filter(this::isSchedulableShift)
+                .filter(shift -> shift.getWorkDate().atTime(shift.getStartTime()).isAfter(now))
                 .findFirst()
                 .map(this::toNextShift)
                 .orElse(null);
@@ -77,7 +87,7 @@ public class HomeScheduleSectionBuilder {
     }
 
     private long minutesUntil(LocalDateTime startAt) {
-        return Math.max(0, Duration.between(LocalDateTime.now(DateTimeDefaults.DEFAULT_ZONE), startAt).toMinutes());
+        return Math.max(0, Duration.between(LocalDateTime.now(clock), startAt).toMinutes());
     }
 
     private HomeDashboardResponse.ScheduleAlert buildScheduleAlert() {
