@@ -71,9 +71,9 @@ public class HomeScheduleSectionBuilder {
     }
 
     private HomeDashboardResponse.NextShift toNextShift(ShiftSchedule shift) {
-        long startsInMinutes = minutesUntil(shift.getWorkDate().atTime(shift.getStartTime()));
+        long startInMinutes = minutesUntil(shift.getWorkDate().atTime(shift.getStartTime()));
         return new HomeDashboardResponse.NextShift(
-                shift.getWorkDate().toString(), shift.getShiftType().name(), startsInMinutes);
+                shift.getWorkDate().toString(), shift.getShiftType().name(), startInMinutes);
     }
 
     private long minutesUntil(LocalDateTime startAt) {
