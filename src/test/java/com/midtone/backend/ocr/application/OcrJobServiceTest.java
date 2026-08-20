@@ -17,6 +17,7 @@ import com.midtone.backend.ocr.domain.OcrJob;
 import com.midtone.backend.ocr.domain.OcrJobRepository;
 import com.midtone.backend.ocr.domain.OcrJobStatus;
 import com.midtone.backend.shift.application.schedule.ShiftCoachingRegenerationTrigger;
+import com.midtone.backend.shift.application.schedule.ShiftTimeDefaultService;
 import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftSource;
@@ -37,6 +38,7 @@ class OcrJobServiceTest {
     private ShiftScheduleRepository shiftScheduleRepository;
     private OcrProcessingWorker worker;
     private ShiftCoachingRegenerationTrigger coachingTrigger;
+    private ShiftTimeDefaultService shiftTimeDefaultService;
     private OcrJobService service;
 
     @BeforeEach
@@ -46,10 +48,12 @@ class OcrJobServiceTest {
         shiftScheduleRepository = mock(ShiftScheduleRepository.class);
         worker = mock(OcrProcessingWorker.class);
         coachingTrigger = mock(ShiftCoachingRegenerationTrigger.class);
+        shiftTimeDefaultService = mock(ShiftTimeDefaultService.class);
+        given(shiftTimeDefaultService.resolve(anyLong(), any())).willReturn(new ShiftTime(null, null));
         CurrentUserIdProvider userIdProvider = () -> 1L;
         service = new OcrJobService(
                 ocrJobRepository, ocrDraftShiftRepository, shiftScheduleRepository,
-                worker, coachingTrigger, userIdProvider);
+                worker, coachingTrigger, shiftTimeDefaultService, userIdProvider);
         given(ocrJobRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
     }
 

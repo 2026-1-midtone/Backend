@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +20,7 @@ import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,9 +40,17 @@ class ShiftPatternApplierTest {
     private ShiftCompletenessCalculator shiftCompletenessCalculator;
     @Mock
     private ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    @Mock
+    private ShiftTimeDefaultService shiftTimeDefaultService;
 
     @InjectMocks
     private ShiftPatternApplier shiftPatternApplier;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(shiftTimeDefaultService.resolve(anyLong(), any()))
+                .thenReturn(new ShiftTime(null, null));
+    }
 
     @Test
     void 반복_패턴으로_새_일정을_생성한다() {

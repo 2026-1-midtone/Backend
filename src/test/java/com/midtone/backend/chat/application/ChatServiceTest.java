@@ -89,6 +89,7 @@ class ChatServiceTest {
                         new com.midtone.backend.nutrition.application.NutritionRecommendationResponse.Recommendation(
                                 1L, "DEEP_SLEEP_VISION", "바이브젠 딥 슬립 앤 비전", "VIVEGEN DEEP SLEEP & VISION",
                                 "/images/products/deep_sleep_vision.png",
+                                "https://www.vivegen.co.kr/shop_view?idx=321",
                                 java.util.List.of("MAGNESIUM"), java.util.List.of(), "건강기능식품은 의약품이 아닙니다."))));
         given(snapshotBuilder.build(1L, today)).willReturn(snapshot);
         given(referenceCatalog.productRecommendation()).willReturn(
