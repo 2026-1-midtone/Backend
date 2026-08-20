@@ -228,17 +228,26 @@ class OcrJobServiceTest {
     }
 
     @Test
-    void 같은_날짜에_초안이_두_개_이상_남아있으면_확정_시_409_예외를_던진다() {
+    void 같은_날짜에_초안이_두_개면_신뢰도가_높은_초안만_저장한다() {
         OcrJob job = completedJob();
         given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
         OcrDraftShift off = new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.OFF, new BigDecimal("0.960"));
         OcrDraftShift night =
                 new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.NIGHT, new BigDecimal("0.970"));
         given(ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(10L)).willReturn(List.of(off, night));
+        given(shiftScheduleRepository.findByUserIdAndWorkDate(anyLong(), any())).willReturn(Optional.empty());
+        given(coachingTrigger.triggerForRange(any(), any())).willReturn(List.of());
 
-        OcrException exception = assertThrows(OcrException.class, () -> service.confirm(10L));
+        ConfirmOcrJobResponse response = service.confirm(10L);
 
-        assertEquals(OcrException.ErrorCode.DRAFT_DATE_CONFLICT, exception.getErrorCode());
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<ShiftSchedule>> captor =
+                org.mockito.ArgumentCaptor.forClass((Class) List.class);
+        verify(shiftScheduleRepository).saveAll(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertEquals(ShiftType.NIGHT, captor.getValue().get(0).getShiftType());
+        assertEquals(1, response.confirmedCount());
+        assertEquals(List.of("2026-08-04"), response.skippedDates());
     }
 
     @Test
