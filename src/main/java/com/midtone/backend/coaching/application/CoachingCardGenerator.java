@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +22,11 @@ import org.springframework.stereotype.Component;
 public class CoachingCardGenerator {
 
     private static final Duration LIGHT_EXPOSURE_MARGIN = Duration.ofHours(1);
-    private static final Duration NAP_LEAD_TIME = Duration.ofHours(4);
-    private static final Duration CAFFEINE_CUTOFF_MARGIN = Duration.ofHours(1);
+    // 이상적 낮잠 시간대(13~16시)를 쓸 수 없을 때의 대체 구간. 교대근무자의 야간 근무 전 낮잠은
+    // 근무 시작 2~3시간 전에 자는 것이 피로 완화에 가장 효과적이라는 연구(CDC 근무시간 교육자료;
+    // Signal 등 교대근무 낮잠 연구)에 근거해, 근무 시작 3시간 전~2시간 전을 대체 구간으로 잡는다.
+    private static final Duration NAP_LEAD_TIME_MAX = Duration.ofHours(3);
+    private static final Duration NAP_LEAD_TIME_MIN = Duration.ofHours(2);
     /**
      * 취침 전 카페인 컷오프 여유시간(민감도별). 카페인 반감기가 개인마다 크게 다르다는 점을 반영한 근사치로,
      * 아래 세 근거를 종합해 설계했다(단일 논문이 이 세 수치를 직접 제시한 것은 아님):
@@ -65,10 +69,14 @@ public class CoachingCardGenerator {
         }
         LocalDateTime shiftStart = todayShift.getWorkDate().atTime(todayShift.getStartTime());
         LocalDateTime shiftEnd = shiftEndDateTime(todayShift);
-        return List.of(
-                lightExposureCard(shiftStart, sleepPattern),
-                napCard(shiftStart, preferredNapMinutes),
-                caffeineCutoffCard(todayShift.getWorkDate(), shiftEnd, caffeineSensitivity, sleepPattern, caffeineStatus));
+        List<CoachingCardContent> cards = new ArrayList<>();
+        cards.add(lightExposureCard(shiftStart, sleepPattern));
+        CoachingCardContent nap = napCard(shiftStart, preferredNapMinutes, sleepPattern);
+        if (nap != null) {
+            cards.add(nap);
+        }
+        cards.add(caffeineCutoffCard(todayShift.getWorkDate(), shiftEnd, caffeineSensitivity, sleepPattern, caffeineStatus));
+        return List.copyOf(cards);
     }
 
     private boolean hasHabitualBedtime(SleepPattern sleepPattern) {
@@ -92,40 +100,82 @@ public class CoachingCardGenerator {
                     + ")로 잡고, 그 이후를 빛 노출 권장 구간으로 계산했습니다.";
             return new CoachingCardContent(
                     CoachingCardType.LIGHT_EXPOSURE, "밝은 빛 노출", windowStart, windowEnd,
-                    "생체리듬 최저점 이후 밝은 빛을 쬐면 위상을 앞당기는 데 도움이 돼요.", rationale);
+                    "생체리듬 최저점 이후 밝은 빛을 쬐면 위상을 앞당기는 데 도움이 돼요. 이 구간 동안 밖에서 활동하시면 좋습니다.",
+                    rationale);
         }
         String rationale = "오늘 근무 시작 시각(" + shiftStart.format(DateTimeDefaults.HOUR_MINUTE) + ") 기준 앞뒤 1시간을 빛 노출 권장 시간으로 계산했습니다. (수면기록이 쌓이면 더 정확해져요)";
         return new CoachingCardContent(
                 CoachingCardType.LIGHT_EXPOSURE, "밝은 빛 노출",
                 shiftStart.minus(LIGHT_EXPOSURE_MARGIN), shiftStart.plus(LIGHT_EXPOSURE_MARGIN),
-                "근무 시작 전후로 밝은 빛을 쬐면 각성 유지에 도움이 돼요.", rationale);
+                "근무 시작 전후로 밝은 빛을 쬐면 각성 유지에 도움이 돼요. 이 구간 동안 밖에서 활동하시면 좋습니다.",
+                rationale);
     }
 
-    private CoachingCardContent napCard(LocalDateTime shiftStart, int preferredNapMinutes) {
-        LocalDateTime defaultWindowStart = shiftStart.minus(NAP_LEAD_TIME);
-        LocalDateTime defaultWindowEnd = defaultWindowStart.plusMinutes(preferredNapMinutes);
+    /**
+     * 낮잠 카드를 계산한다. 20분 정도의 짧은 낮잠 자체는 후보 구간(13~16시 또는 근무 2~3시간 전) 안
+     * 아무 때나 자면 되므로, 특정 시각으로 고정하지 않고 "이 구간 안에서 자면 된다"는 폭 있는 창으로 보여준다.
+     * 두 후보 구간 모두 실제 습관적 본수면 시간대와 겹치면(이미 자고 있는 중이라 낮잠으로 안내할 의미가 없으면)
+     * 카드를 아예 생성하지 않는다(null 반환).
+     */
+    private CoachingCardContent napCard(LocalDateTime shiftStart, int preferredNapMinutes, SleepPattern sleepPattern) {
+        LocalDate date = shiftStart.toLocalDate();
+        LocalDateTime defaultWindowStart = shiftStart.minus(NAP_LEAD_TIME_MAX);
+        LocalDateTime defaultWindowEnd = shiftStart.minus(NAP_LEAD_TIME_MIN);
+        boolean defaultOverlapsSleep = windowOverlapsHabitualSleep(defaultWindowStart, defaultWindowEnd, sleepPattern);
 
-        LocalDateTime idealWindowStart = shiftStart.toLocalDate().atTime(IDEAL_NAP_WINDOW_START);
-        LocalDateTime idealWindowEnd = idealWindowStart.plusMinutes(preferredNapMinutes);
-        LocalDateTime idealWindowBound = shiftStart.toLocalDate().atTime(IDEAL_NAP_WINDOW_END);
-        boolean idealFitsWithinRange = !idealWindowEnd.isAfter(idealWindowBound);
-        boolean idealEndsBeforeShift = !idealWindowEnd.isAfter(shiftStart.minus(IDEAL_NAP_MIN_BUFFER_BEFORE_SHIFT));
+        LocalDateTime idealWindowStart = date.atTime(IDEAL_NAP_WINDOW_START);
+        LocalDateTime idealWindowBound = date.atTime(IDEAL_NAP_WINDOW_END);
+        LocalDateTime shiftBuffer = shiftStart.minus(IDEAL_NAP_MIN_BUFFER_BEFORE_SHIFT);
+        LocalDateTime idealWindowEndCheck = idealWindowStart.plusMinutes(preferredNapMinutes);
+        boolean idealFitsWithinRange = !idealWindowEndCheck.isAfter(idealWindowBound);
+        boolean idealEndsBeforeShift = !idealWindowEndCheck.isAfter(shiftBuffer);
+        LocalDateTime idealWindowEnd = idealWindowBound.isBefore(shiftBuffer) ? idealWindowBound : shiftBuffer;
+        // 13~16시가 실제 습관적 본수면 시간대(예: 나이트 근무 후 낮잠이 아니라 본수면 중인 경우)와 겹치면
+        // 이상적 구간을 쓰지 않고 근무 2~3시간 전 구간으로 대체한다.
+        boolean idealOverlapsSleep = windowOverlapsHabitualSleep(idealWindowStart, idealWindowEnd, sleepPattern);
+        boolean idealUsable = idealFitsWithinRange && idealEndsBeforeShift && !idealOverlapsSleep;
 
-        LocalDateTime windowStart;
-        LocalDateTime windowEnd;
-        String rationale;
-        if (idealFitsWithinRange && idealEndsBeforeShift) {
-            windowStart = idealWindowStart;
-            windowEnd = idealWindowEnd;
-            rationale = "생체리듬상 낮잠에 가장 효과적인 13~16시 구간(김현주·기도형, 2016)에 맞춰 " + preferredNapMinutes + "분 낮잠 창을 계산했습니다.";
-        } else {
-            windowStart = defaultWindowStart;
-            windowEnd = defaultWindowEnd;
-            rationale = "근무 시작 4시간 전부터 설정된 선호 낮잠 시간(" + preferredNapMinutes + "분)만큼 낮잠 창을 계산했습니다. (13~16시 구간과 겹치지 않아 근무 시작 기준으로 계산)";
+        if (idealUsable) {
+            String description = "낮잠은 13~16시 사이에 " + preferredNapMinutes + "분 자는 게 가장 효과적입니다.";
+            String rationale = "생체리듬상 낮잠에 가장 효과적인 13~16시 구간(김현주·기도형, 2016) 안에서 " + preferredNapMinutes
+                    + "분 정도 낮잠을 자면 됩니다.";
+            return new CoachingCardContent(
+                    CoachingCardType.NAP, "권장 낮잠", idealWindowStart, idealWindowEnd, description, rationale);
         }
-        return new CoachingCardContent(
-                CoachingCardType.NAP, "권장 낮잠", windowStart, windowEnd,
-                "근무 전 " + preferredNapMinutes + "분 파워냅", rationale);
+        if (!defaultOverlapsSleep) {
+            String description = "낮잠은 근무 시작 2~3시간 전에 " + preferredNapMinutes + "분 자는 게 효과적입니다.";
+            String rationale = idealOverlapsSleep
+                    ? "13~16시가 최근 습관적 본수면 시간대와 겹쳐 있어, 야간 근무 전 낮잠은 근무 시작 2~3시간 전에 자는 것이 "
+                            + "피로 완화에 가장 효과적이라는 연구에 근거해 이 구간 안에서 " + preferredNapMinutes + "분 정도 낮잠을 자면 됩니다."
+                    : "13~16시 구간이 근무 시작과 겹쳐 쓸 수 없어, 야간 근무 전 낮잠은 근무 시작 2~3시간 전에 자는 것이 "
+                            + "피로 완화에 가장 효과적이라는 연구에 근거해 이 구간 안에서 " + preferredNapMinutes + "분 정도 낮잠을 자면 됩니다.";
+            return new CoachingCardContent(
+                    CoachingCardType.NAP, "권장 낮잠", defaultWindowStart, defaultWindowEnd, description, rationale);
+        }
+        // 이상적 구간·대체 구간 모두 실제 습관적 본수면 시간대와 겹쳐 낮잠을 넣을 자리가 없다 — 카드를 생략한다.
+        return null;
+    }
+
+    /**
+     * 주어진 낮잠 후보 구간(windowStart~windowEnd)이 사용자의 습관적 본수면 시간대(취침~기상,
+     * 자정을 넘나드는 경우 포함)와 겹치는지 확인한다.
+     */
+    private boolean windowOverlapsHabitualSleep(LocalDateTime windowStart, LocalDateTime windowEnd, SleepPattern sleepPattern) {
+        if (sleepPattern == null || sleepPattern.habitualBedtime() == null || sleepPattern.habitualWakeTime() == null) {
+            return false;
+        }
+        LocalDate date = windowStart.toLocalDate();
+        LocalDateTime bedtime = date.atTime(sleepPattern.habitualBedtime());
+        LocalDateTime wake = date.atTime(sleepPattern.habitualWakeTime());
+        if (!wake.isAfter(bedtime)) {
+            wake = wake.plusDays(1);
+        }
+        return overlaps(windowStart, windowEnd, bedtime, wake) || overlaps(windowStart, windowEnd, bedtime.minusDays(1), wake.minusDays(1))
+                || overlaps(windowStart, windowEnd, bedtime.plusDays(1), wake.plusDays(1));
+    }
+
+    private boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart, LocalDateTime bEnd) {
+        return aStart.isBefore(bEnd) && bStart.isBefore(aEnd);
     }
 
     private CoachingCardContent caffeineCutoffCard(
@@ -134,15 +184,15 @@ public class CoachingCardGenerator {
         LocalDateTime targetBedtime = resolveTargetBedtime(workDate, shiftEnd, sleepPattern);
         boolean anchoredToHabitualBedtime = hasHabitualBedtime(sleepPattern);
         Duration buffer = CAFFEINE_SLEEP_BUFFER.get(sensitivity);
-        LocalDateTime center = targetBedtime.minus(buffer);
-        LocalDateTime windowStart = center.minus(CAFFEINE_CUTOFF_MARGIN);
-        LocalDateTime windowEnd = center.plus(CAFFEINE_CUTOFF_MARGIN);
+        // 카페인 컷오프는 "이 구간에서만 피하면 된다"는 범위가 아니라, 이 시각 이후로는 계속 피해야 하는
+        // 단일 기준점(cutoff)이다. windowStart == windowEnd로 두어 하나의 시각으로 표현한다.
+        LocalDateTime cutoff = targetBedtime.minus(buffer);
+        LocalDateTime windowStart = cutoff;
+        LocalDateTime windowEnd = cutoff;
 
         StringBuilder description = new StringBuilder()
-                .append(windowStart.format(DateTimeDefaults.HOUR_MINUTE))
-                .append("~")
-                .append(windowEnd.format(DateTimeDefaults.HOUR_MINUTE))
-                .append(" 사이 카페인 중단");
+                .append(cutoff.format(DateTimeDefaults.HOUR_MINUTE))
+                .append(" 이후 카페인 중단");
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
             description.append(" · 오늘 카페인 ").append(caffeineStatus.totalAmountMg())
                     .append("mg으로 일일 권장 상한(300mg)을 초과했어요");
@@ -152,7 +202,7 @@ public class CoachingCardGenerator {
                 ? "최근 " + sleepPattern.sampleCount() + "일 습관적 취침시각(" + targetBedtime.format(DateTimeDefaults.HOUR_MINUTE) + ")"
                 : "근무 종료 후 목표 취침 시각(" + targetBedtime.format(DateTimeDefaults.HOUR_MINUTE) + ")";
         String rationale = anchorText + "을 기준으로, 설정된 카페인 민감도(" + sensitivity
-                + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 창입니다.";
+                + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 컷오프 시각입니다. 이 시각 이후로는 취침 전까지 계속 카페인을 피하는 것이 좋습니다.";
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
             rationale += " 하루 300mg 이상 섭취는 불안·불쾌감을 유발하고 수면시간·수면효율에 영향을 준다는 "
                     + "국내 연구(Lee 등, 2007) 근거가 있어 함께 안내했어요.";

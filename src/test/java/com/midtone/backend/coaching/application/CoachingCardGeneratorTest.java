@@ -36,14 +36,69 @@ class CoachingCardGeneratorTest {
         assertEquals(LocalDateTime.of(2026, 8, 7, 21, 0), lightExposure.windowStart());
         assertEquals(LocalDateTime.of(2026, 8, 7, 23, 0), lightExposure.windowEnd());
 
-        // 이상적 낮잠 시간대(13~16시, 김현주·기도형 2016)가 근무 시작(22:00) 1시간 전 안에 들어오므로 이를 우선한다.
+        // 이상적 낮잠 시간대(13~16시, 김현주·기도형 2016)가 근무 시작(22:00) 1시간 전 안에 들어오므로 이를 우선하고,
+        // 그 구간 전체(13:00~16:00)를 "이 안에서 20분 자면 되는" 창으로 보여준다.
         CoachingCardContent nap = cardOf(cards, CoachingCardType.NAP);
         assertEquals(LocalDateTime.of(2026, 8, 7, 13, 0), nap.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 7, 13, 20), nap.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 16, 0), nap.windowEnd());
+        assertTrue(nap.description().contains("13~16시"));
 
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 7, 21, 0), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 7, 23, 0), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 22, 0), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 22, 0), caffeineCutoff.windowEnd());
+        assertTrue(caffeineCutoff.description().contains("22:00 이후 카페인 중단"));
+    }
+
+    @Test
+    void 이상적_낮잠_시간대가_근무시작과_겹치면_근무_2에서_3시간_전_구간으로_대체한다() {
+        ShiftSchedule dayShift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 7), ShiftType.DAY,
+                new ShiftTime(LocalTime.of(14, 0), LocalTime.of(22, 0)));
+
+        List<CoachingCardContent> cards = generator.generate(dayShift, CaffeineSensitivity.MEDIUM, 20);
+
+        // 13~16시 구간은 근무 시작(14:00) 1시간 전 버퍼(13:00)와 겹쳐 쓸 수 없으므로,
+        // 근무 시작 3시간 전(11:00)~2시간 전(12:00) 구간으로 대체된다.
+        CoachingCardContent nap = cardOf(cards, CoachingCardType.NAP);
+        assertEquals(LocalDateTime.of(2026, 8, 7, 11, 0), nap.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 12, 0), nap.windowEnd());
+        assertTrue(nap.description().contains("2~3시간 전"));
+    }
+
+    @Test
+    void 습관적_본수면_시간대가_13에서_16시와_겹치면_근무_2에서_3시간_전_구간으로_대체한다() {
+        ShiftSchedule nightShift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 7), ShiftType.NIGHT,
+                new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
+        // 습관적 본수면 09:00~15:00 - 13~16시와 겹침
+        SleepPattern sleepPattern = new SleepPattern(
+                LocalTime.of(9, 0), LocalTime.of(15, 0), LocalTime.of(12, 0), LocalTime.of(13, 0),
+                10, LocalDate.of(2026, 7, 24), LocalDate.of(2026, 8, 6));
+
+        List<CoachingCardContent> cards = generator.generate(
+                nightShift, CaffeineSensitivity.MEDIUM, 20, sleepPattern, null);
+
+        CoachingCardContent nap = cardOf(cards, CoachingCardType.NAP);
+        assertEquals(LocalDateTime.of(2026, 8, 7, 19, 0), nap.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 20, 0), nap.windowEnd());
+        assertTrue(nap.description().contains("2~3시간 전"));
+        assertTrue(nap.rationale().contains("본수면"));
+    }
+
+    @Test
+    void 이상적_구간과_대체_구간_모두_습관적_본수면과_겹치면_낮잠_카드를_생성하지_않는다() {
+        ShiftSchedule nightShift = new ShiftSchedule(
+                1L, LocalDate.of(2026, 8, 7), ShiftType.NIGHT,
+                new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
+        // 습관적 본수면 12:00~21:00 - 13~16시(이상적 구간)와 19~20시(근무 3~2시간 전 대체 구간) 모두와 겹침
+        SleepPattern sleepPattern = new SleepPattern(
+                LocalTime.of(12, 0), LocalTime.of(21, 0), LocalTime.of(16, 30), LocalTime.of(19, 0),
+                10, LocalDate.of(2026, 7, 24), LocalDate.of(2026, 8, 6));
+
+        List<CoachingCardContent> cards = generator.generate(
+                nightShift, CaffeineSensitivity.MEDIUM, 20, sleepPattern, null);
+
+        assertTrue(cards.stream().noneMatch(card -> card.cardType() == CoachingCardType.NAP));
     }
 
     @Test
@@ -87,10 +142,10 @@ class CoachingCardGeneratorTest {
         List<CoachingCardContent> cards = generator.generate(
                 nightShift, CaffeineSensitivity.MEDIUM, 20, sleepPattern, null);
 
-        // 습관적 취침 07:30(다음날) - 카페인 민감도 MEDIUM 여유 6시간 = 01:30 중심, ±1시간 창
+        // 습관적 취침 07:30(다음날) - 카페인 민감도 MEDIUM 여유 6시간 = 컷오프 01:30
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 8, 0, 30), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 8, 2, 30), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 8, 1, 30), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 8, 1, 30), caffeineCutoff.windowEnd());
         assertTrue(caffeineCutoff.rationale().contains("습관적 취침시각"));
     }
 
@@ -109,8 +164,8 @@ class CoachingCardGeneratorTest {
 
         assertEquals(1, cards.size());
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 7, 18, 0), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 7, 20, 0), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 19, 0), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 19, 0), caffeineCutoff.windowEnd());
         assertTrue(caffeineCutoff.description().contains("초과"));
         assertTrue(caffeineCutoff.rationale().contains("김혜성"));
     }
