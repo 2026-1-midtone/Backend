@@ -211,7 +211,7 @@ public class CoachingCardGenerator {
         }
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
             rationale += " 하루 300mg 이상 섭취는 불안·불쾌감을 유발하고 수면시간·수면효율에 영향을 준다는 "
-                    + "국내 연구(Lee 등, 2007) 근거가 있어 함께 안내했어요.";
+                    + "국내 연구(김혜성·이종은, 2020; Lee 등, 2007 재인용) 근거가 있어 함께 안내했어요.";
         }
         return new CoachingCardContent(CoachingCardType.CAFFEINE_CUTOFF, "카페인 컷오프", windowStart, windowEnd,
                 description.toString(), rationale);
