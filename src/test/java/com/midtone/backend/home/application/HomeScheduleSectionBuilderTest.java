@@ -72,7 +72,7 @@ class HomeScheduleSectionBuilderTest {
 
         assertEquals("2026-08-11", section.nextShift().workDate());
         assertEquals("NIGHT", section.nextShift().shiftType());
-        assertTrue(section.nextShift().startsInMinutes() >= 0);
+        assertTrue(section.nextShift().startInMinutes() >= 0);
     }
 
     @Test
