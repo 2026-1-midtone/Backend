@@ -22,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 class RoutineGenerationIntegrationTest extends IntegrationTest {
 
+    private static final String OFFSET_DATE_TIME = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?\\+09:00";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -68,6 +70,21 @@ class RoutineGenerationIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tasks", Matchers.not(Matchers.empty())))
                 .andExpect(jsonPath("$.tasks[*].sourceType", Matchers.hasItem("COACHING")));
+    }
+
+    @Test
+    void 루틴_작업은_권장_시간창을_함께_내려준다() throws Exception {
+        createShift("2026-09-10", "NIGHT", "22:00", "07:00");
+
+        mockMvc.perform(get("/api/v1/coachings").param("date", "2026-09-10")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/routines").param("date", "2026-09-10")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tasks[0].windowStart", Matchers.matchesRegex(OFFSET_DATE_TIME)))
+                .andExpect(jsonPath("$.tasks[0].windowEnd", Matchers.matchesRegex(OFFSET_DATE_TIME)));
     }
 
     @Test
