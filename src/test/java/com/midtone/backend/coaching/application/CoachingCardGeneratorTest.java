@@ -102,7 +102,7 @@ class CoachingCardGeneratorTest {
                 LocalTime.of(23, 0), LocalTime.of(7, 0), LocalTime.of(3, 0), LocalTime.of(5, 0),
                 14, LocalDate.of(2026, 7, 24), LocalDate.of(2026, 8, 6));
         DailyCaffeineStatus overLimit =
-                new DailyCaffeineStatus(LocalDate.of(2026, 8, 7), 210, new BigDecimal("3.50"), true);
+                new DailyCaffeineStatus(LocalDate.of(2026, 8, 7), 210, new BigDecimal("3.50"), 150, true);
 
         List<CoachingCardContent> cards = generator.generate(
                 offShift, CaffeineSensitivity.LOW, 20, sleepPattern, overLimit);
@@ -121,7 +121,7 @@ class CoachingCardGeneratorTest {
                 1L, LocalDate.of(2026, 8, 7), ShiftType.NIGHT,
                 new ShiftTime(LocalTime.of(22, 0), LocalTime.of(7, 0)));
         DailyCaffeineStatus withinLimit =
-                new DailyCaffeineStatus(LocalDate.of(2026, 8, 7), 80, new BigDecimal("1.00"), false);
+                new DailyCaffeineStatus(LocalDate.of(2026, 8, 7), 80, new BigDecimal("1.00"), 400, false);
 
         List<CoachingCardContent> cards = generator.generate(
                 nightShift, CaffeineSensitivity.HIGH, 20, null, withinLimit);

@@ -51,7 +51,7 @@ class ChatSnapshotBuilderTest {
                         List.of("VITAMIN_D"), List.of(), "의약품이 아닙니다.")));
         given(contextBuilder.build(1L, date)).willReturn("schedule");
         given(sleepCalculator.calculate(1L, date)).willReturn(new SleepPattern(null, null, null, null, 0, date, date));
-        given(caffeineCalculator.calculate(1L, date)).willReturn(new DailyCaffeineStatus(date, 0, new BigDecimal("0.00"), false));
+        given(caffeineCalculator.calculate(1L, date)).willReturn(new DailyCaffeineStatus(date, 0, new BigDecimal("0.00"), 400, false));
         given(dailyRepository.findByUserIdAndCoachingDate(1L, date)).willReturn(Optional.empty());
         given(routineRepository.findAllByUserIdAndTaskDateOrderByIdAsc(1L, date)).willReturn(List.of());
         given(settingsRepository.findById(1L)).willReturn(Optional.empty());
