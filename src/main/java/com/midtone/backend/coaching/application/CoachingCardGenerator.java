@@ -23,10 +23,20 @@ public class CoachingCardGenerator {
     private static final Duration LIGHT_EXPOSURE_MARGIN = Duration.ofHours(1);
     private static final Duration NAP_LEAD_TIME = Duration.ofHours(4);
     private static final Duration CAFFEINE_CUTOFF_MARGIN = Duration.ofHours(1);
+    /**
+     * 취침 전 카페인 컷오프 여유시간(민감도별). 카페인 반감기가 개인마다 크게 다르다는 점을 반영한 근사치로,
+     * 아래 세 근거를 종합해 설계했다(단일 논문이 이 세 수치를 직접 제시한 것은 아님):
+     * - IOM(2001, NBK223808): 건강한 성인의 평균 혈장 반감기는 약 5시간(개인차 1.5~9.5시간).
+     * - CYP1A2 유전 다형성(rs762551): 빠른 대사형 반감기 4~6시간, 느린 대사형 8~12시간.
+     * - Gardiner et al.(2023, Sleep Medicine Reviews) 메타분석: 표준 용량(107mg) 기준 총수면시간 감소를
+     *   피하려면 취침 최소 8.8시간 전 카페인 섭취를 권장.
+     * LOW=빠른 대사형 반감기 하한(4h), MEDIUM=IOM 평균 반감기에 여유를 더한 값(6h),
+     * HIGH=Gardiner(2023) 권장 컷오프에 근접하고 느린 대사형 범위와도 겹치는 값(9h).
+     */
     private static final Map<CaffeineSensitivity, Duration> CAFFEINE_SLEEP_BUFFER = Map.of(
-            CaffeineSensitivity.LOW, Duration.ofHours(3),
-            CaffeineSensitivity.MEDIUM, Duration.ofHours(5),
-            CaffeineSensitivity.HIGH, Duration.ofHours(6));
+            CaffeineSensitivity.LOW, Duration.ofHours(4),
+            CaffeineSensitivity.MEDIUM, Duration.ofHours(6),
+            CaffeineSensitivity.HIGH, Duration.ofHours(9));
 
     // 낮잠: 김현주·기도형(2016) 등 국내 근거 — 13~16시가 생체리듬(circadian dip)상 가장 효과적인 낮잠 시간대.
     private static final LocalTime IDEAL_NAP_WINDOW_START = LocalTime.of(13, 0);
