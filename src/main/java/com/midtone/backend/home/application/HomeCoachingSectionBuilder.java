@@ -47,7 +47,6 @@ public class HomeCoachingSectionBuilder {
     }
 
     private HomeDashboardResponse.TopCoachingCard toTopCard(TodayCoachingResponse.Card card) {
-        return new HomeDashboardResponse.TopCoachingCard(
-                card.cardId(), card.cardType(), card.title(), card.windowStart(), card.windowEnd());
+        return new HomeDashboardResponse.TopCoachingCard(card.cardId(), card.cardType(), card.title(), card.windowStart());
     }
 }
