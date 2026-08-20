@@ -79,7 +79,7 @@ class OcrControllerTest {
     @Test
     void 확정하면_반영_결과를_반환한다() throws Exception {
         given(ocrJobService.confirm(1L)).willReturn(
-                new ConfirmOcrJobResponse(3, List.of("2026-08-01"), List.of("2026-08-01", "2026-08-02")));
+                new ConfirmOcrJobResponse(3, List.of("2026-08-01"), List.of("2026-08-01", "2026-08-02"), List.of()));
 
         mockMvc.perform(post("/api/v1/ocr/jobs/1:confirm"))
                 .andExpect(status().isOk())
