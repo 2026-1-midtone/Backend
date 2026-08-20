@@ -141,6 +141,68 @@ class RoutineServiceTest {
         assertEquals(1.0, byDay.get(6).completionRate());
     }
 
+    @Test
+    void 아무도_손대지_않은_날은_주간_완료율에서_뺀다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
+        // 어제 것은 화면을 열어보느라 만들어졌을 뿐 손댄 적이 없다. 실행하지 못한 날로 깎으면 안 된다.
+        givenTasks(
+                task(today.minusDays(1), "NAP", TaskStatus.PENDING),
+                task(today.minusDays(1), "MEAL", TaskStatus.PENDING),
+                task(today, "NAP", TaskStatus.DONE),
+                task(today, "MEAL", TaskStatus.DONE));
+
+        assertEquals(1.0, newService().getReport("7d").overallCompletionRate());
+    }
+
+    @Test
+    void 하루라도_손댄_날은_못한_것까지_모두_센다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
+        givenTasks(
+                task(today, "NAP", TaskStatus.DONE),
+                task(today, "MEAL", TaskStatus.PENDING),
+                task(today, "LIGHT", TaskStatus.PENDING));
+
+        assertEquals(1.0 / 3, newService().getReport("7d").overallCompletionRate());
+    }
+
+    @Test
+    void 건너뛴_것도_그날을_손댄_것으로_본다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
+        givenTasks(
+                task(today, "NAP", TaskStatus.SKIPPED),
+                task(today, "MEAL", TaskStatus.PENDING));
+
+        assertEquals(0.0, newService().getReport("7d").overallCompletionRate());
+        assertEquals(2, findCategory(newService().getReport("7d"), "NAP").total()
+                + findCategory(newService().getReport("7d"), "MEAL").total());
+    }
+
+    @Test
+    void 분류별_완료율도_손대지_않은_날은_빼고_센다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
+        givenTasks(
+                task(today.minusDays(1), "NAP", TaskStatus.PENDING),
+                task(today, "NAP", TaskStatus.DONE));
+
+        RoutineService.CategoryCompletion nap = findCategory(newService().getReport("7d"), "NAP");
+        assertEquals(1, nap.total());
+        assertEquals(1.0, nap.completionRate());
+    }
+
+    @Test
+    void 날짜별_그래프는_손대지_않은_날도_있는_그대로_준다() {
+        LocalDate today = LocalDate.now(DateTimeDefaults.DEFAULT_ZONE);
+        givenTasks(
+                task(today.minusDays(1), "NAP", TaskStatus.PENDING),
+                task(today, "NAP", TaskStatus.DONE));
+
+        List<RoutineService.DailyCompletion> byDay = newService().getReport("7d").byDay();
+
+        assertEquals(1, byDay.get(5).total());
+        assertEquals(0, byDay.get(5).done());
+        assertEquals(1, byDay.get(6).total());
+    }
+
     private RoutineService newService() {
         return new RoutineService(currentUserIdProvider, routineTaskRepository);
     }
