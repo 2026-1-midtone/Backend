@@ -37,14 +37,13 @@ public record HomeDashboardResponse(
     public record TodayShift(String shiftType, String startTime, String endTime) {
     }
 
-    public record NextShift(String workDate, String shiftType, long startInMinutes) {
+    public record NextShift(String workDate, String shiftType, long startsInMinutes) {
     }
 
     public record RoutineProgress(int total, int done, double completionRate) {
     }
 
-    public record TopCoachingCard(
-            Long cardId, String cardType, String title, String windowStart, String windowEnd) {
+    public record TopCoachingCard(Long cardId, String cardType, String title, String windowStart) {
     }
 
     public record Streak(int currentStreak) {

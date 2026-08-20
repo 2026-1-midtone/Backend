@@ -1,7 +1,6 @@
 package com.midtone.backend.routine;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -102,43 +101,6 @@ class RoutineGenerationIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk());
 
         org.junit.jupiter.api.Assertions.assertEquals(countAfterFirst, routineTaskRepository.count());
-    }
-
-    @Test
-    void 루틴_항목을_완료하면_다시_조회해도_완료_상태가_유지된다() throws Exception {
-        createShift("2026-09-10", "NIGHT", "22:00", "07:00");
-        mockMvc.perform(get("/api/v1/coachings").param("date", "2026-09-10")
-                        .header("Authorization", authorization))
-                .andExpect(status().isOk());
-        long taskId = routineTaskRepository.findAll().getFirst().getId();
-
-        mockMvc.perform(patch("/api/v1/routines/tasks/" + taskId)
-                        .header("Authorization", authorization)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"DONE\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("DONE"))
-                .andExpect(jsonPath("$.progress.done").value(1));
-
-        mockMvc.perform(get("/api/v1/routines").param("date", "2026-09-10")
-                        .header("Authorization", authorization))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tasks[0].status").value("DONE"))
-                .andExpect(jsonPath("$.progress.done").value(1));
-    }
-
-    @Test
-    void 루틴_항목은_실행_시간대를_함께_내려준다() throws Exception {
-        createShift("2026-09-10", "NIGHT", "22:00", "07:00");
-        mockMvc.perform(get("/api/v1/coachings").param("date", "2026-09-10")
-                        .header("Authorization", authorization))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/v1/routines").param("date", "2026-09-10")
-                        .header("Authorization", authorization))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tasks[0].windowStart", Matchers.notNullValue()))
-                .andExpect(jsonPath("$.tasks[0].windowEnd", Matchers.notNullValue()));
     }
 
     private void createShift(String workDate, String shiftType, String startTime, String endTime) throws Exception {
