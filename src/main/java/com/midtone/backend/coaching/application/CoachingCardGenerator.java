@@ -203,6 +203,12 @@ public class CoachingCardGenerator {
                 : "근무 종료 후 목표 취침 시각(" + targetBedtime.format(DateTimeDefaults.HOUR_MINUTE) + ")";
         String rationale = anchorText + "을 기준으로, 설정된 카페인 민감도(" + sensitivity
                 + ") 기준 여유를 " + buffer.toHours() + "시간으로 잡아 계산된 컷오프 시각입니다. 이 시각 이후로는 취침 전까지 계속 카페인을 피하는 것이 좋습니다.";
+        if (!anchoredToHabitualBedtime) {
+            // 오늘과 같은 근무 유형 뒤 수면 기록이 부족해(SleepPatternCalculator) 습관적 취침시각을 못 구하고,
+            // 근무 종료 시각을 취침시각으로 대략 가정해 계산했다는 걸 밝힌다.
+            rationale += " 아직 이 근무 유형 뒤 수면 기록이 부족해 근무 종료 시각을 취침시각으로 대략 가정해 계산했어요. "
+                    + "수면 기록을 더 남겨주시면 실제 취침시각 기준으로 더 정확하게 계산돼요.";
+        }
         if (caffeineStatus != null && caffeineStatus.overDailyLimit()) {
             rationale += " 하루 300mg 이상 섭취는 불안·불쾌감을 유발하고 수면시간·수면효율에 영향을 준다는 "
                     + "국내 연구(Lee 등, 2007) 근거가 있어 함께 안내했어요.";
