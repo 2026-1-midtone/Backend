@@ -23,14 +23,17 @@ public class ShiftService {
     private final ShiftScheduleRepository shiftScheduleRepository;
     private final CurrentUserIdProvider currentUserIdProvider;
     private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    private final ShiftTimeDefaultService shiftTimeDefaultService;
 
     public ShiftService(
             ShiftScheduleRepository shiftScheduleRepository,
             CurrentUserIdProvider currentUserIdProvider,
-            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger) {
+            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger,
+            ShiftTimeDefaultService shiftTimeDefaultService) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.currentUserIdProvider = currentUserIdProvider;
         this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
+        this.shiftTimeDefaultService = shiftTimeDefaultService;
     }
 
     @Transactional
@@ -123,8 +126,23 @@ public class ShiftService {
 
     private ShiftSchedule buildShift(long userId, LocalDate workDate, CreateShiftRequest request) {
         ShiftType shiftType = ShiftType.valueOf(request.shiftType());
-        ShiftTime shiftTime = new ShiftTime(parseTime(request.startTime()), parseTime(request.endTime()));
+        ShiftTime shiftTime = resolveShiftTime(
+                userId, shiftType, parseTime(request.startTime()), parseTime(request.endTime()));
         return new ShiftSchedule(userId, workDate, shiftType, shiftTime);
+    }
+
+    /**
+     * 시각을 하나라도 생략하면 사용자가 정한 근무 유형별 기본 시각으로 채운다.
+     * 시각이 비어 있으면 코칭 카드·다음 근무·야간 영양 타이밍이 전부 계산되지 않기 때문이다.
+     */
+    private ShiftTime resolveShiftTime(long userId, ShiftType shiftType, LocalTime startTime, LocalTime endTime) {
+        if (startTime != null && endTime != null) {
+            return new ShiftTime(startTime, endTime);
+        }
+        ShiftTime fallback = shiftTimeDefaultService.resolve(userId, shiftType);
+        return new ShiftTime(
+                startTime != null ? startTime : fallback.startTime(),
+                endTime != null ? endTime : fallback.endTime());
     }
 
     private LocalTime parseTime(String time) {
