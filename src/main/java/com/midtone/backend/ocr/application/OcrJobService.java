@@ -32,6 +32,8 @@ public class OcrJobService {
 
     private static final Set<String> SUPPORTED_MIME_TYPES = Set.of("image/jpeg", "image/png");
     private static final long MAX_IMAGE_BYTES = 10L * 1024 * 1024;
+    // 사람이 직접 넣은 초안은 같은 날짜의 인식 결과보다 항상 우선한다.
+    private static final BigDecimal MANUAL_DRAFT_CONFIDENCE = BigDecimal.ONE;
 
     private final OcrJobRepository ocrJobRepository;
     private final OcrDraftShiftRepository ocrDraftShiftRepository;
@@ -89,6 +91,26 @@ public class OcrJobService {
                 request.endTime() == null ? null : LocalTime.parse(request.endTime()),
                 request.excluded());
         return OcrDraftResponse.from(draft);
+    }
+
+    /**
+     * OCR 이 놓친 날짜의 초안을 직접 추가한다. 근무 유형이 아닌 배지가 붙은 칸은 초안이 생기지 않아
+     * 수정할 대상 자체가 없으므로, 검수 화면에서 확정 전에 채워 넣을 수 있게 한다.
+     * 사람이 직접 입력한 값이므로 신뢰도는 최대값으로 두어 같은 날짜의 인식 결과보다 우선하게 한다.
+     */
+    @Transactional
+    public OcrDraftResponse addDraft(Long jobId, CreateOcrDraftRequest request) {
+        OcrJob job = findOwnedJob(jobId);
+        requireCompleted(job);
+        LocalDate workDate = LocalDate.parse(request.workDate());
+        if (!YearMonth.from(workDate).equals(YearMonth.parse(job.getTargetMonth()))) {
+            throw new OcrException(OcrException.ErrorCode.DRAFT_DATE_OUT_OF_MONTH);
+        }
+        OcrDraftShift draft = new OcrDraftShift(
+                jobId, workDate, ShiftType.valueOf(request.shiftType()), MANUAL_DRAFT_CONFIDENCE,
+                request.startTime() == null ? null : LocalTime.parse(request.startTime()),
+                request.endTime() == null ? null : LocalTime.parse(request.endTime()));
+        return OcrDraftResponse.from(ocrDraftShiftRepository.save(draft));
     }
 
     @Transactional
