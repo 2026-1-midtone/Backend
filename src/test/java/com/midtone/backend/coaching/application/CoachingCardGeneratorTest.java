@@ -42,8 +42,8 @@ class CoachingCardGeneratorTest {
         assertEquals(LocalDateTime.of(2026, 8, 7, 13, 20), nap.windowEnd());
 
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 8, 0, 0), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 8, 2, 0), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 21, 0), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 23, 0), caffeineCutoff.windowEnd());
     }
 
     @Test
@@ -87,10 +87,10 @@ class CoachingCardGeneratorTest {
         List<CoachingCardContent> cards = generator.generate(
                 nightShift, CaffeineSensitivity.MEDIUM, 20, sleepPattern, null);
 
-        // 습관적 취침 07:30(다음날) - 카페인 민감도 MEDIUM 여유 5시간 = 02:30 중심, ±1시간 창
+        // 습관적 취침 07:30(다음날) - 카페인 민감도 MEDIUM 여유 6시간 = 01:30 중심, ±1시간 창
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 8, 1, 30), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 8, 3, 30), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 8, 0, 30), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 8, 2, 30), caffeineCutoff.windowEnd());
         assertTrue(caffeineCutoff.rationale().contains("습관적 취침시각"));
     }
 
@@ -109,8 +109,8 @@ class CoachingCardGeneratorTest {
 
         assertEquals(1, cards.size());
         CoachingCardContent caffeineCutoff = cardOf(cards, CoachingCardType.CAFFEINE_CUTOFF);
-        assertEquals(LocalDateTime.of(2026, 8, 7, 19, 0), caffeineCutoff.windowStart());
-        assertEquals(LocalDateTime.of(2026, 8, 7, 21, 0), caffeineCutoff.windowEnd());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 18, 0), caffeineCutoff.windowStart());
+        assertEquals(LocalDateTime.of(2026, 8, 7, 20, 0), caffeineCutoff.windowEnd());
         assertTrue(caffeineCutoff.description().contains("초과"));
         assertTrue(caffeineCutoff.rationale().contains("김혜성"));
     }
