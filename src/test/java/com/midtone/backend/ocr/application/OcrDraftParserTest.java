@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -436,6 +437,44 @@ class OcrDraftParserTest {
 
     private void assertDraft(OcrDraftParser.ParsedDraft draft, int day, ShiftType shiftType) {
         assertDraftForMonth(draft, 2026, 8, day, shiftType);
+    }
+
+    @Test
+    void 이미지_상단의_연월_표기에서_대상_월을_읽어낸다() {
+        JsonNode header = new ObjectMapper().readTree(
+                "{\"text\": \"2025\uB144 06\uC6D4 D 10 E 3 N 4\", \"pages\": []}");
+
+        assertEquals(Optional.of(YearMonth.of(2025, 6)), parser.detectMonth(header));
+    }
+
+    @Test
+    void 연월_표기가_없으면_대상_월을_추론하지_않는다() {
+        JsonNode header = new ObjectMapper().readTree("{\"text\": \"1 D 2 N 3 OFF\", \"pages\": []}");
+
+        assertEquals(Optional.empty(), parser.detectMonth(header));
+    }
+
+    @Test
+    void 연도_없이_월만_적힌_이미지는_요청_연도에_이미지의_월을_적용한다() {
+        JsonNode header = new ObjectMapper().readTree(
+                "{\"text\": \"8\uC6D4 S M T W T F S 27 28\", \"pages\": []}");
+
+        assertEquals(YearMonth.of(2025, 8), parser.resolveMonth(header, YearMonth.of(2025, 6)));
+    }
+
+    @Test
+    void 이미지에_연월이_모두_있으면_요청_월을_무시한다() {
+        JsonNode header = new ObjectMapper().readTree(
+                "{\"text\": \"2025\uB144 06\uC6D4\", \"pages\": []}");
+
+        assertEquals(YearMonth.of(2025, 6), parser.resolveMonth(header, YearMonth.of(2026, 8)));
+    }
+
+    @Test
+    void 이미지에_월_표기가_없으면_요청_월을_그대로_쓴다() {
+        JsonNode header = new ObjectMapper().readTree("{\"text\": \"1 D 2 N\", \"pages\": []}");
+
+        assertEquals(YearMonth.of(2026, 8), parser.resolveMonth(header, YearMonth.of(2026, 8)));
     }
 
     private void assertDraftForMonth(

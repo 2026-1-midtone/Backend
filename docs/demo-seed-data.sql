@@ -8,7 +8,7 @@
 --   1. 시연 계정으로 앱에서 구글 로그인을 **한 번 먼저** 해야 한다.
 --      로그인 시점에 users 행이 생성되며, 이 스크립트는 그 행을 찾아서 데이터를 붙인다.
 --   2. 아래 @demo_email 을 시연 계정 이메일로 바꾼다.
---   3. 이 스크립트는 @demo_email 계정의 기존 근무표·코칭·루틴·수면·카페인·낮잠 데이터를
+--   3. 이 스크립트는 @demo_email 계정의 기존 근무표·코칭·루틴·수면·카페인·낮잠·영양소 목표 데이터를
 --      **삭제하고 다시 넣는다**. 실제 사용자 계정에는 절대 실행하지 말 것.
 --   4. 날짜는 실행 시점의 CURDATE() 기준으로 계산된다. 시연 당일에 실행하면 가장 정확하다.
 --
@@ -55,6 +55,7 @@ DELETE FROM nap_sessions WHERE user_id = @demo_user_id;
 DELETE FROM sleep_logs WHERE user_id = @demo_user_id;
 DELETE FROM caffeine_intakes WHERE user_id = @demo_user_id;
 DELETE FROM shift_schedules WHERE user_id = @demo_user_id;
+DELETE FROM user_nutrient_needs WHERE user_id = @demo_user_id;
 
 -- ── 3. 근무표 42일 (오늘 기준 -14일 ~ +27일) ─────────────────────────────────
 -- 앞으로 28일(오늘 ~ +27일)이 모두 차 있으므로 /api/v1/shifts/completeness?weeks=4 가 100% 가 된다.
@@ -151,7 +152,23 @@ VALUES
         TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '15:30:00'),
         TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 DAY), '15:28:00'), 'COMPLETED');
 
--- ── 7. 결과 확인 ─────────────────────────────────────────────────────────────
+-- ── 7. 영양소 목표 ──────────────────────────────────────────────
+-- 영양소 목표가 한 건도 없으면 POST /api/v1/chat/messages:recommend-products 가 LLM 까지 가지 않고
+-- "아직 등록된 영양소 목표가 없어 추천할 제품을 찾지 못했어요" 를 고정 반환한다.
+-- 아래 3개는 V10 이 심는 제품 3종을 모두 걸리게 하려고 골랐다.
+--   MAGNESIUM  -> 바이브젠 딥 슬립 앤 비전
+--   VITAMIN_C  -> 바이브젠 바이탈 스킨 샷 (리바이브 에너지 샷에도 있음)
+--   VITAMIN_D  -> 바이브젠 리바이브 에너지 샷
+INSERT INTO user_nutrient_needs (user_id, nutrient_code, source, recorded_on)
+VALUES
+    (@demo_user_id, 'MAGNESIUM', 'USER_REPORTED', CURDATE()),
+    (@demo_user_id, 'VITAMIN_C', 'USER_REPORTED', CURDATE()),
+    (@demo_user_id, 'VITAMIN_D', 'USER_REPORTED', CURDATE())
+ON DUPLICATE KEY UPDATE
+    source = VALUES(source),
+    recorded_on = VALUES(recorded_on);
+
+-- ── 8. 결과 확인 ─────────────────────────────────────────────────────────────
 SELECT '근무표 총 일수' AS item, COUNT(*) AS value
 FROM shift_schedules WHERE user_id = @demo_user_id
 UNION ALL
@@ -170,7 +187,10 @@ SELECT '수면 기록', COUNT(*) FROM sleep_logs WHERE user_id = @demo_user_id
 UNION ALL
 SELECT '카페인 기록', COUNT(*) FROM caffeine_intakes WHERE user_id = @demo_user_id
 UNION ALL
-SELECT '낮잠 기록', COUNT(*) FROM nap_sessions WHERE user_id = @demo_user_id;
+SELECT '낮잠 기록', COUNT(*) FROM nap_sessions WHERE user_id = @demo_user_id
+UNION ALL
+SELECT '영양소 목표 (0 이면 제품 추천이 동작하지 않음)', COUNT(*)
+FROM user_nutrient_needs WHERE user_id = @demo_user_id;
 
 SELECT work_date, shift_type, start_time, end_time
 FROM shift_schedules

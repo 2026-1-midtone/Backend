@@ -23,7 +23,10 @@ public class ShiftException extends RuntimeException {
         BULK_UPDATE_RANGE_EXCEEDED("변경 기간은 최대 90일까지 지정할 수 있습니다.", HttpStatus.BAD_REQUEST),
         SHIFT_PATTERN_NOT_FOUND("해당 패턴을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
         PATTERN_NAME_REQUIRED("저장할 패턴 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
-        INVALID_COMPLETENESS_WEEKS("조회 기간은 1주 이상 52주 이하여야 합니다.", HttpStatus.BAD_REQUEST);
+        INVALID_COMPLETENESS_WEEKS("조회 기간은 1주 이상 52주 이하여야 합니다.", HttpStatus.BAD_REQUEST),
+        SHIFT_TIME_DEFAULT_NOT_CONFIGURABLE(
+                "기본 시각은 DAY, EVENING, NIGHT 에만 설정할 수 있습니다.", HttpStatus.BAD_REQUEST),
+        DUPLICATE_SHIFT_TIME_DEFAULT("근무 유형별 기본 시각은 유형당 한 번만 지정할 수 있습니다.", HttpStatus.BAD_REQUEST);
 
         private final String message;
         private final HttpStatus status;

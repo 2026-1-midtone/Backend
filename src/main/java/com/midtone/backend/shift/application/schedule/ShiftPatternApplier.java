@@ -12,6 +12,7 @@ import com.midtone.backend.shift.domain.ShiftTime;
 import com.midtone.backend.shift.domain.ShiftType;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,18 +29,21 @@ public class ShiftPatternApplier {
     private final ShiftPatternService shiftPatternService;
     private final ShiftCompletenessCalculator shiftCompletenessCalculator;
     private final ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger;
+    private final ShiftTimeDefaultService shiftTimeDefaultService;
 
     public ShiftPatternApplier(
             ShiftScheduleRepository shiftScheduleRepository,
             CurrentUserIdProvider currentUserIdProvider,
             ShiftPatternService shiftPatternService,
             ShiftCompletenessCalculator shiftCompletenessCalculator,
-            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger) {
+            ShiftCoachingRegenerationTrigger shiftCoachingRegenerationTrigger,
+            ShiftTimeDefaultService shiftTimeDefaultService) {
         this.shiftScheduleRepository = shiftScheduleRepository;
         this.currentUserIdProvider = currentUserIdProvider;
         this.shiftPatternService = shiftPatternService;
         this.shiftCompletenessCalculator = shiftCompletenessCalculator;
         this.shiftCoachingRegenerationTrigger = shiftCoachingRegenerationTrigger;
+        this.shiftTimeDefaultService = shiftTimeDefaultService;
     }
 
     @Transactional
@@ -71,9 +75,10 @@ public class ShiftPatternApplier {
     private ApplyResult applyPatternToRange(
             long userId, LocalDate startDate, LocalDate endDate, List<ShiftType> patternTypes) {
         Map<LocalDate, ShiftType> desiredTypes = buildDesiredTypes(startDate, endDate, patternTypes);
+        Map<ShiftType, ShiftTime> defaultTimes = resolveDefaultTimes(userId, patternTypes);
         Map<LocalDate, ShiftSchedule> existingShifts = findExistingShifts(userId, startDate, endDate);
-        int updatedCount = updateExistingShifts(existingShifts, desiredTypes);
-        List<ShiftSchedule> newShifts = buildNewShifts(userId, desiredTypes, existingShifts);
+        int updatedCount = updateExistingShifts(existingShifts, desiredTypes, defaultTimes);
+        List<ShiftSchedule> newShifts = buildNewShifts(userId, desiredTypes, existingShifts, defaultTimes);
         shiftScheduleRepository.saveAll(newShifts);
         return new ApplyResult(newShifts.size(), updatedCount);
     }
@@ -95,21 +100,44 @@ public class ShiftPatternApplier {
         return shifts.stream().collect(Collectors.toMap(ShiftSchedule::getWorkDate, Function.identity()));
     }
 
+    /**
+     * 유형이 바뀐 날만 시각까지 새 유형의 기본값으로 덮어쓴다.
+     * 유형이 그대로인 날은 사용자가 그 날만 따로 손봤을 수 있어 시각을 건드리지 않는다.
+     */
+    /** 유형은 최대 4가지뿐이라 날짜마다 조회하지 않고 유형별로 한 번만 읽는다. */
+    private Map<ShiftType, ShiftTime> resolveDefaultTimes(long userId, List<ShiftType> patternTypes) {
+        Map<ShiftType, ShiftTime> defaultTimes = new EnumMap<>(ShiftType.class);
+        patternTypes.forEach(
+                shiftType -> defaultTimes.computeIfAbsent(
+                        shiftType, type -> shiftTimeDefaultService.resolve(userId, type)));
+        return defaultTimes;
+    }
+
     private int updateExistingShifts(
-            Map<LocalDate, ShiftSchedule> existingShifts, Map<LocalDate, ShiftType> desiredTypes) {
+            Map<LocalDate, ShiftSchedule> existingShifts,
+            Map<LocalDate, ShiftType> desiredTypes,
+            Map<ShiftType, ShiftTime> defaultTimes) {
         int updatedCount = 0;
         for (Map.Entry<LocalDate, ShiftSchedule> entry : existingShifts.entrySet()) {
-            entry.getValue().update(desiredTypes.get(entry.getKey()), null, null);
+            ShiftSchedule shift = entry.getValue();
+            ShiftType desiredType = desiredTypes.get(entry.getKey());
+            if (shift.getShiftType() != desiredType) {
+                shift.changeType(desiredType, defaultTimes.get(desiredType));
+            }
             updatedCount++;
         }
         return updatedCount;
     }
 
     private List<ShiftSchedule> buildNewShifts(
-            long userId, Map<LocalDate, ShiftType> desiredTypes, Map<LocalDate, ShiftSchedule> existingShifts) {
+            long userId,
+            Map<LocalDate, ShiftType> desiredTypes,
+            Map<LocalDate, ShiftSchedule> existingShifts,
+            Map<ShiftType, ShiftTime> defaultTimes) {
         return desiredTypes.entrySet().stream()
                 .filter(entry -> !existingShifts.containsKey(entry.getKey()))
-                .map(entry -> new ShiftSchedule(userId, entry.getKey(), entry.getValue(), new ShiftTime(null, null)))
+                .map(entry -> new ShiftSchedule(
+                        userId, entry.getKey(), entry.getValue(), defaultTimes.get(entry.getValue())))
                 .toList();
     }
 

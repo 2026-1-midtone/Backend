@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,11 +23,13 @@ import com.midtone.backend.shift.domain.ShiftSchedule;
 import com.midtone.backend.shift.domain.ShiftScheduleRepository;
 import com.midtone.backend.shift.domain.ShiftSource;
 import com.midtone.backend.shift.domain.ShiftType;
+import com.midtone.backend.shift.domain.UserShiftTimeDefaultRepository;
 import com.midtone.backend.support.IntegrationTest;
 import com.midtone.backend.support.TestUserFixture;
 import com.midtone.backend.user.domain.User;
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +63,9 @@ class OcrIntegrationTest extends IntegrationTest {
     private DailyCoachingRepository dailyCoachingRepository;
 
     @Autowired
+    private UserShiftTimeDefaultRepository userShiftTimeDefaultRepository;
+
+    @Autowired
     private TestUserFixture testUserFixture;
 
     @MockitoBean
@@ -77,6 +83,7 @@ class OcrIntegrationTest extends IntegrationTest {
         ocrJobRepository.deleteAll();
         dailyCoachingRepository.deleteAll();
         shiftScheduleRepository.deleteAll();
+        userShiftTimeDefaultRepository.deleteAll();
         user = testUserFixture.createUserWithSettings("ocr-" + System.nanoTime());
         authorization = "Bearer " + jwtProvider.createAccessToken(user.getId());
         try (InputStream in = getClass().getResourceAsStream("/ocr/form-parser-response.json")) {
@@ -151,6 +158,34 @@ class OcrIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(get(OCR_JOBS_PATH + "/" + jobId).header("Authorization", authorization))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
+    void 초안에_시각이_없으면_확정할_때_사용자_기본값이_채워진다() throws Exception {
+        given(documentAiClient.process(any(), any())).willReturn(fixtureDocument);
+        mockMvc.perform(put("/api/v1/users/me/shift-time-defaults")
+                        .contentType("application/json")
+                        .content("{\"defaults\":[{\"shiftType\":\"NIGHT\","
+                                + "\"startTime\":\"23:00\",\"endTime\":\"07:30\"}]}")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        long jobId = uploadJob();
+        pollUntilStatus(jobId, "COMPLETED");
+        mockMvc.perform(post(OCR_JOBS_PATH + "/" + jobId + "/drafts")
+                        .contentType("application/json")
+                        .content("{\"workDate\":\"2026-08-20\",\"shiftType\":\"NIGHT\"}")
+                        .header("Authorization", authorization))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post(OCR_JOBS_PATH + "/" + jobId + ":confirm").header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        ShiftSchedule saved = shiftScheduleRepository
+                .findByUserIdAndWorkDate(user.getId(), LocalDate.of(2026, 8, 20))
+                .orElseThrow();
+        assertEquals(LocalTime.of(23, 0), saved.getStartTime());
+        assertEquals(LocalTime.of(7, 30), saved.getEndTime());
     }
 
     @Test
