@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RoutineService {
@@ -29,7 +30,7 @@ public class RoutineService {
         List<com.midtone.backend.routine.domain.RoutineTask> tasks = findTasks(date);
         List<RoutineTaskResponse> mappedTasks = tasks.stream().map(task -> new RoutineTaskResponse(
                 task.getId(), task.getSourceType(), task.getSourceId(), task.getCategory(), task.getTitle(), task.getTip(),
-                task.getStatus().name())).toList();
+                format(task.getWindowStart()), format(task.getWindowEnd()), task.getStatus().name())).toList();
         int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
         int skipped = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.SKIPPED).count();
         int total = tasks.size();
@@ -37,6 +38,7 @@ public class RoutineService {
         return new DailyRoutine(date, mappedTasks, new Progress(total, done, skipped, completionRate));
     }
 
+    @Transactional
     public UpdatedTask updateTaskStatus(long taskId, String requestedStatus) {
         TaskStatus status = parseStatus(requestedStatus);
         com.midtone.backend.routine.domain.RoutineTask task = routineTaskRepository.findById(taskId)
@@ -85,6 +87,10 @@ public class RoutineService {
         return new RoutineReport(period, from, to, completionRate, new Streak(current, longest, lastCheckinDate));
     }
 
+    private static String format(LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.atZone(DateTimeDefaults.DEFAULT_ZONE).toOffsetDateTime().toString();
+    }
+
     private TaskStatus parseStatus(String requestedStatus) {
         try {
             return TaskStatus.valueOf(requestedStatus);
@@ -109,7 +115,7 @@ public class RoutineService {
     }
 
     public record RoutineTaskResponse(Long taskId, String sourceType, Long sourceId, String category, String title,
-                                      String tip, String status) {
+                                      String tip, String windowStart, String windowEnd, String status) {
     }
 
     public record Progress(int total, int done, int skipped, double completionRate) {
