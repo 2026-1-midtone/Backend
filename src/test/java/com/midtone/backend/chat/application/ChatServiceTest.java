@@ -81,7 +81,7 @@ class ChatServiceTest {
     @Test
     void 제품_추천_요청은_추천_전용_근거로_AI를_호출한다() {
         LocalDate today = LocalDate.parse("2026-08-19");
-        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, java.util.List.of(), null, null,
+        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, java.util.List.of(), null, null, null,
                 java.util.List.of(), new ChatContextSnapshot.RoutineProgress(0, 0),
                 new com.midtone.backend.nutrition.application.NutrientNeedResponse(java.util.List.of(
                         new com.midtone.backend.nutrition.application.NutrientNeedResponse.Item("MAGNESIUM", "USER", today))),
@@ -124,7 +124,7 @@ class ChatServiceTest {
     @Test
     void 목표는_있지만_매칭_제품이_없으면_AI_호출_없이_안내한다() {
         LocalDate today = LocalDate.parse("2026-08-19");
-        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, java.util.List.of(), null, null,
+        ChatContextSnapshot snapshot = new ChatContextSnapshot(today, null, null, java.util.List.of(), null, null, null,
                 java.util.List.of(), new ChatContextSnapshot.RoutineProgress(0, 0),
                 new com.midtone.backend.nutrition.application.NutrientNeedResponse(java.util.List.of(
                         new com.midtone.backend.nutrition.application.NutrientNeedResponse.Item("MAGNESIUM", "USER", today))),
