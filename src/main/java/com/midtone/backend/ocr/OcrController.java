@@ -1,11 +1,13 @@
 package com.midtone.backend.ocr;
 
 import com.midtone.backend.ocr.application.ConfirmOcrJobResponse;
+import com.midtone.backend.ocr.application.CreateOcrDraftRequest;
 import com.midtone.backend.ocr.application.OcrDraftResponse;
 import com.midtone.backend.ocr.application.OcrJobDetailResponse;
 import com.midtone.backend.ocr.application.OcrJobResponse;
 import com.midtone.backend.ocr.application.OcrJobService;
 import com.midtone.backend.ocr.application.UpdateOcrDraftRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,12 @@ public class OcrController {
     @GetMapping("/ocr/jobs/{jobId}")
     public ResponseEntity<OcrJobDetailResponse> getJob(@PathVariable Long jobId) {
         return ResponseEntity.ok(ocrJobService.getJob(jobId));
+    }
+
+    @PostMapping("/ocr/jobs/{jobId}/drafts")
+    public ResponseEntity<OcrDraftResponse> addDraft(
+            @PathVariable Long jobId, @Valid @RequestBody CreateOcrDraftRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ocrJobService.addDraft(jobId, request));
     }
 
     @PatchMapping("/ocr/jobs/{jobId}/drafts/{draftId}")

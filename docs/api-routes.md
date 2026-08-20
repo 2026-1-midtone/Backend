@@ -21,13 +21,35 @@ POST /api/v1/ocr/jobs
 Content-Type: multipart/form-data
 
 image  (필수)  JPEG 또는 PNG, 최대 10MB
-month  (선택)  yyyy-MM
+month  (선택)  yyyy-MM   ※ 이미지에 "2025년 06월" 같은 연월 표기가 있으면 그쪽이 우선한다
 
 → 202 Accepted  {"jobId": 1, "status": "PENDING"}
 ```
 
 분석은 비동기라 202를 받은 뒤 `GET /api/v1/ocr/jobs/{jobId}`로 폴링해서
 `status`가 `COMPLETED`가 되면 `drafts`를 검수하고 `:confirm`으로 확정한다.
+
+### 검수 단계에서 초안 손보기
+
+OCR이 근무 유형으로 읽지 못한 칸(예: "교육" 배지)은 초안이 아예 만들어지지 않는다.
+이 경우 수정할 대상이 없으므로 확정 전에 직접 추가한다.
+
+```
+POST /api/v1/ocr/jobs/{jobId}/drafts
+Content-Type: application/json
+
+{"workDate": "2025-06-10", "shiftType": "DAY", "startTime": "09:00", "endTime": "18:00"}
+   workDate   (필수)  yyyy-MM-dd, 잡의 대상 월 안이어야 한다
+   shiftType  (필수)  DAY | EVENING | NIGHT | OFF
+   startTime / endTime  (선택)  HH:mm
+
+→ 201 Created  {"draftId": 7, "workDate": "2025-06-10", ...}
+→ 400          날짜가 대상 월을 벗어남
+→ 409          잡이 COMPLETED 상태가 아님
+```
+
+직접 넣은 초안은 신뢰도가 최대값이라, 같은 날짜에 인식된 초안이 있으면 그쪽을 밀어내고
+확정된다. 밀려난 날짜는 `:confirm` 응답의 `skippedDates`로 알려준다.
 
 ## 인증
 
@@ -60,6 +82,7 @@ month  (선택)  yyyy-MM
 | DELETE | `/api/v1/shift-patterns/{patternId}` |
 | POST | `/api/v1/ocr/jobs` |
 | GET | `/api/v1/ocr/jobs/{jobId}` |
+| POST | `/api/v1/ocr/jobs/{jobId}/drafts` |
 | PATCH | `/api/v1/ocr/jobs/{jobId}/drafts/{draftId}` |
 | POST | `/api/v1/ocr/jobs/{jobId}:confirm` |
 | POST | `/api/v1/ocr/jobs/{jobId}:retry` |

@@ -9,6 +9,7 @@ import com.midtone.backend.user.domain.UserSettingsRepository;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NapService {
@@ -58,6 +59,7 @@ public class NapService {
         return toActiveNap(nap);
     }
 
+    @Transactional
     public FinishedNap finishNap(long napId, String requestedStatus) {
         NapStatus status = parseFinishedStatus(requestedStatus);
 

@@ -49,6 +49,7 @@ class OcrProcessingWorkerTest {
         given(documentAiClient.process(any(), any()))
                 .willReturn(new ObjectMapper().readTree("{\"text\":\"\"}"));
         given(ocrFallbackExtractor.extract(any(), any(), any())).willReturn(List.of());
+        given(ocrDraftParser.resolveMonth(any(), any())).willAnswer(invocation -> invocation.getArgument(1));
     }
 
     @Test
@@ -115,6 +116,19 @@ class OcrProcessingWorkerTest {
         worker.process(10L);
 
         verify(ocrDraftParser).parse(any(), eq(YearMonth.of(2026, 8)));
+    }
+
+    @Test
+    void 이미지에서_읽은_연월이_요청_월보다_우선한다() {
+        given(ocrDraftParser.resolveMonth(any(), any())).willReturn(YearMonth.of(2025, 6));
+        given(ocrDraftParser.parse(any(), any())).willReturn(List.of(
+                new OcrDraftParser.ParsedDraft(
+                        java.time.LocalDate.of(2025, 6, 1), ShiftType.DAY, new java.math.BigDecimal("0.900"))));
+
+        worker.process(10L);
+
+        verify(ocrDraftParser).parse(any(), eq(YearMonth.of(2025, 6)));
+        assertEquals("2025-06", job.getTargetMonth());
     }
 
     @Test

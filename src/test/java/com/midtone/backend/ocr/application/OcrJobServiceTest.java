@@ -177,6 +177,40 @@ class OcrJobServiceTest {
     }
 
     @Test
+    void OCR이_놓친_날짜는_초안을_새로_추가할_수_있다() {
+        OcrJob job = completedJob();
+        given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
+        given(ocrDraftShiftRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+
+        OcrDraftResponse response = service.addDraft(
+                10L, new CreateOcrDraftRequest("2026-08-10", "NIGHT", "22:00", "07:00"));
+
+        assertEquals("2026-08-10", response.workDate());
+        assertEquals("NIGHT", response.shiftType());
+        assertEquals("22:00", response.startTime());
+        assertEquals(false, response.excluded());
+        verify(ocrDraftShiftRepository).save(any(OcrDraftShift.class));
+    }
+
+    @Test
+    void COMPLETED가_아니면_초안_추가_시_409_예외를_던진다() {
+        OcrJob pending = new OcrJob(1L, new byte[] {1}, "image/png", "2026-08");
+        given(ocrJobRepository.findById(10L)).willReturn(Optional.of(pending));
+        OcrException exception = assertThrows(OcrException.class,
+                () -> service.addDraft(10L, new CreateOcrDraftRequest("2026-08-10", "NIGHT", null, null)));
+        assertEquals(OcrException.ErrorCode.JOB_NOT_COMPLETED, exception.getErrorCode());
+    }
+
+    @Test
+    void 초안_추가_시_날짜가_대상_월을_벗어나면_400_예외를_던진다() {
+        OcrJob job = completedJob();
+        given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
+        OcrException exception = assertThrows(OcrException.class,
+                () -> service.addDraft(10L, new CreateOcrDraftRequest("2026-09-10", "NIGHT", null, null)));
+        assertEquals(OcrException.ErrorCode.DRAFT_DATE_OUT_OF_MONTH, exception.getErrorCode());
+    }
+
+    @Test
     void COMPLETED가_아니면_확정_시_409_예외를_던진다() {
         OcrJob pending = new OcrJob(1L, new byte[] {1}, "image/png", "2026-08");
         given(ocrJobRepository.findById(10L)).willReturn(Optional.of(pending));
@@ -228,17 +262,26 @@ class OcrJobServiceTest {
     }
 
     @Test
-    void 같은_날짜에_초안이_두_개_이상_남아있으면_확정_시_409_예외를_던진다() {
+    void 같은_날짜에_초안이_두_개면_신뢰도가_높은_초안만_저장한다() {
         OcrJob job = completedJob();
         given(ocrJobRepository.findById(10L)).willReturn(Optional.of(job));
         OcrDraftShift off = new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.OFF, new BigDecimal("0.960"));
         OcrDraftShift night =
                 new OcrDraftShift(10L, LocalDate.of(2026, 8, 4), ShiftType.NIGHT, new BigDecimal("0.970"));
         given(ocrDraftShiftRepository.findByJobIdOrderByWorkDateAsc(10L)).willReturn(List.of(off, night));
+        given(shiftScheduleRepository.findByUserIdAndWorkDate(anyLong(), any())).willReturn(Optional.empty());
+        given(coachingTrigger.triggerForRange(any(), any())).willReturn(List.of());
 
-        OcrException exception = assertThrows(OcrException.class, () -> service.confirm(10L));
+        ConfirmOcrJobResponse response = service.confirm(10L);
 
-        assertEquals(OcrException.ErrorCode.DRAFT_DATE_CONFLICT, exception.getErrorCode());
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<ShiftSchedule>> captor =
+                org.mockito.ArgumentCaptor.forClass((Class) List.class);
+        verify(shiftScheduleRepository).saveAll(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertEquals(ShiftType.NIGHT, captor.getValue().get(0).getShiftType());
+        assertEquals(1, response.confirmedCount());
+        assertEquals(List.of("2026-08-04"), response.skippedDates());
     }
 
     @Test

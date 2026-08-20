@@ -67,6 +67,52 @@ public class OcrDraftParser {
             Map.entry("오프", ShiftType.OFF), Map.entry("오", ShiftType.OFF));
     private static final Set<String> TRUNCATED_KOREAN_SHIFT_CODES = Set.of("데", "오");
 
+    private static final Pattern KOREAN_YEAR_MONTH =
+            Pattern.compile("(20\\d{2})\\s*년\\s*(1[0-2]|0?[1-9])\\s*월");
+    private static final Pattern NUMERIC_YEAR_MONTH =
+            Pattern.compile("(20\\d{2})[.\\-/](1[0-2]|0?[1-9])(?![\\d.\\-/])");
+
+    private static final Pattern MONTH_ONLY =
+            Pattern.compile("(?<![\\d.\\-/])(1[0-2]|0?[1-9])\\s*월");
+
+    /**
+     * 근무표 이미지가 스스로 밝힌 월을 요청 월보다 우선해서 대상 월을 정한다.
+     * 업로드 요청의 month 파라미터는 프론트 기본값이 현재 월이라 과거 월 근무표를 올리면
+     * 날짜가 통째로 어긋나기 때문이다.
+     *
+     * <p>"2025년 06월"처럼 연월이 다 있으면 그대로 쓰고, "8월"처럼 월만 적혀 있으면 연도는
+     * 알 수 없으므로 요청 연도를 유지한 채 월만 이미지 값으로 바꾼다.
+     */
+    public YearMonth resolveMonth(JsonNode document, YearMonth requested) {
+        return detectMonth(document)
+                .or(() -> detectMonthOnly(document).map(requested::withMonth))
+                .orElse(requested);
+    }
+
+    private Optional<Integer> detectMonthOnly(JsonNode document) {
+        Matcher matcher = MONTH_ONLY.matcher(document.path("text").asString(""));
+        return matcher.find() ? Optional.of(Integer.parseInt(matcher.group(1))) : Optional.empty();
+    }
+
+    /**
+     * 근무표 이미지에 적힌 "2025년 06월" 같은 표기에서 대상 월을 읽는다.
+     * 업로드 요청의 month 파라미터는 프론트 기본값이 현재 월이라 과거 월 근무표를 올리면
+     * 날짜가 통째로 어긋나기 때문에, 이미지가 스스로 밝힌 월이 있으면 그쪽을 우선한다.
+     */
+    public Optional<YearMonth> detectMonth(JsonNode document) {
+        String fullText = document.path("text").asString("");
+        return firstYearMonth(KOREAN_YEAR_MONTH, fullText)
+                .or(() -> firstYearMonth(NUMERIC_YEAR_MONTH, fullText));
+    }
+
+    private Optional<YearMonth> firstYearMonth(Pattern pattern, String text) {
+        Matcher matcher = pattern.matcher(text);
+        if (!matcher.find()) {
+            return Optional.empty();
+        }
+        return Optional.of(YearMonth.of(Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2))));
+    }
+
     public List<ParsedDraft> parse(JsonNode document, YearMonth targetMonth) {
         String fullText = document.path("text").asString("");
         Map<LocalDate, ParsedDraft> byDate = new LinkedHashMap<>();
