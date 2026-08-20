@@ -75,12 +75,19 @@ class RoutineControllerTest {
     void returnsSevenDayRoutineReport() throws Exception {
         given(routineService.getReport("7d")).willReturn(new RoutineService.RoutineReport(
                 "7d", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 7), 0.71,
+                List.of(new RoutineService.CategoryCompletion("MEAL", 4, 1, 0.25)), "MEAL",
+                List.of(new RoutineService.DailyCompletion(LocalDate.of(2026, 8, 1), 2, 1, 0.5)),
                 new RoutineService.Streak(3, 5, LocalDate.of(2026, 8, 7))));
 
         mockMvc.perform(get("/api/v1/routines/report").param("period", "7d"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.period").value("7d"))
                 .andExpect(jsonPath("$.overallCompletionRate").value(0.71))
+                .andExpect(jsonPath("$.byCategory[0].category").value("MEAL"))
+                .andExpect(jsonPath("$.byCategory[0].completionRate").value(0.25))
+                .andExpect(jsonPath("$.weakestCategory").value("MEAL"))
+                .andExpect(jsonPath("$.byDay[0].date").value("2026-08-01"))
+                .andExpect(jsonPath("$.byDay[0].completionRate").value(0.5))
                 .andExpect(jsonPath("$.streak.currentStreak").value(3));
     }
 }

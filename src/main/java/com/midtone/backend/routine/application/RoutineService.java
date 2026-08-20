@@ -71,8 +71,9 @@ public class RoutineService {
         LocalDate from = to.minusDays(days - 1L);
         List<com.midtone.backend.routine.domain.RoutineTask> tasks = routineTaskRepository
                 .findAllByUserIdAndTaskDateBetweenOrderByTaskDateAscIdAsc(currentUserIdProvider.getCurrentUserId(), from, to);
-        int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
-        double completionRate = tasks.isEmpty() ? 0.0 : (double) done / tasks.size();
+        List<com.midtone.backend.routine.domain.RoutineTask> counted = onEngagedDays(tasks);
+        int done = (int) counted.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+        double completionRate = counted.isEmpty() ? 0.0 : (double) done / counted.size();
         Set<LocalDate> completedDates = tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE)
                 .map(com.midtone.backend.routine.domain.RoutineTask::getTaskDate).collect(Collectors.toSet());
         int current = 0;
@@ -84,7 +85,66 @@ public class RoutineService {
             if (completedDates.contains(date)) { running++; longest = Math.max(longest, running); } else { running = 0; }
         }
         LocalDate lastCheckinDate = completedDates.stream().max(LocalDate::compareTo).orElse(null);
-        return new RoutineReport(period, from, to, completionRate, new Streak(current, longest, lastCheckinDate));
+        List<CategoryCompletion> byCategory = summarizeByCategory(counted);
+        return new RoutineReport(period, from, to, completionRate, byCategory, weakestCategory(byCategory),
+                summarizeByDay(tasks, from, to), new Streak(current, longest, lastCheckinDate));
+    }
+
+    /**
+     * 실행률에 넣을 태스크만 고른다.
+     * 루틴은 코칭을 조회하는 순간 만들어지므로, 화면만 열어보고 지나간 날에도 손대지 않은 태스크가 남는다.
+     * 그런 날은 실행하지 못한 날이 아니라 앱을 쓰지 않은 날이므로 통째로 뺀다.
+     * 반대로 완료든 건너뛰기든 하나라도 표시한 날은 못 한 것까지 모두 센다.
+     */
+    private static List<com.midtone.backend.routine.domain.RoutineTask> onEngagedDays(List<com.midtone.backend.routine.domain.RoutineTask> tasks) {
+        Set<LocalDate> engagedDates = tasks.stream()
+                .filter(task -> task.getStatus() != TaskStatus.PENDING)
+                .map(com.midtone.backend.routine.domain.RoutineTask::getTaskDate)
+                .collect(Collectors.toSet());
+        return tasks.stream().filter(task -> engagedDates.contains(task.getTaskDate())).toList();
+    }
+
+    /**
+     * 분류별 완료율. 어떤 습관이 잘 지켜지지 않는지 화면에서 그대로 보여주기 위한 값이다.
+     * 순서를 고정해야 화면이 매번 뒤바뀌지 않으므로 분류 이름순으로 정렬한다.
+     */
+    private static List<CategoryCompletion> summarizeByCategory(
+            List<com.midtone.backend.routine.domain.RoutineTask> tasks) {
+        return tasks.stream()
+                .collect(Collectors.groupingBy(com.midtone.backend.routine.domain.RoutineTask::getCategory,
+                        java.util.TreeMap::new, Collectors.toList()))
+                .entrySet().stream()
+                .map(entry -> toCategoryCompletion(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private static CategoryCompletion toCategoryCompletion(
+            String category, List<com.midtone.backend.routine.domain.RoutineTask> tasks) {
+        int done = (int) tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+        return new CategoryCompletion(category, tasks.size(), done, (double) done / tasks.size());
+    }
+
+    /** 완료율이 가장 낮은 분류. 기록이 없으면 지목할 대상도 없다. */
+    private static String weakestCategory(List<CategoryCompletion> byCategory) {
+        return byCategory.stream()
+                .min(java.util.Comparator.comparingDouble(CategoryCompletion::completionRate))
+                .map(CategoryCompletion::category)
+                .orElse(null);
+    }
+
+    /** 기간 안의 모든 날짜를 채워서 준다. 루틴이 없던 날도 그래프에서 빈칸으로 남지 않게 하려는 것이다. */
+    private static List<DailyCompletion> summarizeByDay(
+            List<com.midtone.backend.routine.domain.RoutineTask> tasks, LocalDate from, LocalDate to) {
+        java.util.Map<LocalDate, List<com.midtone.backend.routine.domain.RoutineTask>> tasksByDate = tasks.stream()
+                .collect(Collectors.groupingBy(com.midtone.backend.routine.domain.RoutineTask::getTaskDate));
+        List<DailyCompletion> byDay = new java.util.ArrayList<>();
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            List<com.midtone.backend.routine.domain.RoutineTask> dayTasks = tasksByDate.getOrDefault(date, List.of());
+            int done = (int) dayTasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
+            byDay.add(new DailyCompletion(date, dayTasks.size(), done,
+                    dayTasks.isEmpty() ? 0.0 : (double) done / dayTasks.size()));
+        }
+        return byDay;
     }
 
     private TaskStatus parseStatus(String requestedStatus) {
@@ -131,7 +191,21 @@ public class RoutineService {
                                double completionRate, List<String> doneTitles, List<String> missedTitles) {
     }
 
-    public record RoutineReport(String period, LocalDate from, LocalDate to, double overallCompletionRate, Streak streak) {
+    /**
+     * @param overallCompletionRate 손댄 날만 모아서 낸 완료율. 표시가 하나도 없는 날은 빼고 센다.
+     * @param byCategory 분류별 완료율. 전체 완료율과 같은 기준으로 센다.
+     * @param weakestCategory 완료율이 가장 낮은 분류. 기록이 없으면 null이다.
+     * @param byDay 날짜별 완료율. 이쪽은 그래프에 쓰므로 손대지 않은 날도 있는 그대로 준다.
+     */
+    public record RoutineReport(String period, LocalDate from, LocalDate to, double overallCompletionRate,
+                                List<CategoryCompletion> byCategory, String weakestCategory,
+                                List<DailyCompletion> byDay, Streak streak) {
+    }
+
+    public record CategoryCompletion(String category, int total, int done, double completionRate) {
+    }
+
+    public record DailyCompletion(LocalDate date, int total, int done, double completionRate) {
     }
 
     public record Streak(int currentStreak, int longestStreak, LocalDate lastCheckinDate) {
